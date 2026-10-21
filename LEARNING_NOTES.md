@@ -1,10 +1,11 @@
 # CaseFlow — Learning Notes
 
 ## Current position
-**Week 1, Step 1 (Setup), sub-step 1.7 — first Git commit**
+**Week 1, Step 2 (Prisma + Neon), sub-step 2.1 — create a free Neon account + database**
 
-Next thing to do: from the `CaseFlow/` folder run `git add .`, check `git status` (no `.env`, no `node_modules`),
-then `git commit -m "Step 1: project setup with Express, TypeScript and health route"`.
+Step 1 is DONE and committed (`195eafb`). Next thing to do: sign up at neon.tech (free plan), create a
+project called `caseflow`, and copy the connection string into `api/.env` as `DATABASE_URL=...`
+(never into code or Git).
 
 Step 1 plan (sub-steps):
 - 1.1 Project folder + root `.gitignore`
@@ -24,7 +25,7 @@ Step 1 plan (sub-steps):
 - [x] 1.4 Installed TypeScript tools and wrote `tsconfig.json` (checked with `npx tsc --showConfig`)
 - [x] 1.5 Express installed, `app.ts` + `server.ts` written, `npm run dev` works, `/health` returns `{"status":"ok"}`
 - [x] 1.6 `.env` + `.env.example` with `PORT=3000`, loaded by `dotenv`; `.gitignore` now ignores `node_modules/`, `dist/`, `.env` (tested with PORT=4000)
-- [ ] 1.7 First commit
+- [x] 1.7 First commit `195eafb` — **Step 1 finished** ✅
 
 > Note: the project folder was moved and the old chat was lost. This file was rebuilt on
 > 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed.
@@ -80,6 +81,13 @@ Step 1 plan (sub-steps):
 - **Folder vs file in .gitignore**: `name/` matches only a folder; `name` matches a file (or folder).
 - **Fallbacks can hide bugs**: `process.env.PORT || 3000` kept working even when `.env` was broken. Test with a different value to prove a setting is really read.
 
+- **Commit**: one saved snapshot of the project with a message. `git add` puts files in the box (staging area); `git commit` seals and labels it.
+- **Commit hash** (e.g. `195eafb`): the snapshot's unique ID, short version. Used to look at or go back to that snapshot.
+- **HEAD -> master**: "you are here" — HEAD points to the latest commit on the `master` branch.
+- **dist/**: the folder where TypeScript puts the translated `.js` files when we build. Generated, so never committed.
+- **Commit source, not output**: don't commit what a tool can re-create (`node_modules/`, `dist/`). Do commit the recipe (`package.json`, `package-lock.json`, `src/`).
+- **LF vs CRLF warning**: Windows and Mac/Linux mark line endings differently; Git converts them automatically. Harmless.
+
 ---
 
 ## Commands I ran
@@ -94,6 +102,9 @@ Step 1 plan (sub-steps):
 - `npm install -D @types/express` — installs Express's type labels as a dev dependency.
 - `npm run dev` — runs the `dev` script from package.json: `tsx watch src/server.ts` (starts the server, restarts on save).
 - `npm install dotenv` — installs dotenv, which loads `.env` into `process.env`.
+- `git add .` — puts all changed files (except ignored ones) into the staging area.
+- `git commit -m "message"` — saves a snapshot of the staged files with a message.
+- `git log --oneline` — shows the history of commits, one line each.
 - `npx tsc --showConfig` — prints the TypeScript settings it actually understood (good for catching typos).
 
 ---
