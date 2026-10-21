@@ -27,3 +27,11 @@ Each entry: **Problem → Cause → Fix** (and the lesson).
 - **Cause:** The `.env` format is `KEY=value`. dotenv quietly skips lines it can't read, so `PORT` was never loaded. The server still worked only because of the fallback `|| 3000` in `server.ts`, which hid the bug.
 - **Fix:** Changed both files to `PORT=3000`.
 - **Lesson:** `.env` uses `=`, no spaces, no quotes needed. A "default" value can hide a broken setting, so test with a different value (e.g. 4000) to prove it's really being read.
+
+---
+
+## 4. Database password leaked into the AI chat (2026-10-21, Step 2.1)
+- **Problem:** The full Neon connection strings (with password) were sent to the AI assistant.
+- **Cause:** I selected lines in `api/.env` in VS Code. The IDE automatically shares selected text with the assistant as context.
+- **Fix:** Reset the `neondb_owner` password in Neon (Branches → production → Roles), replaced the password part (between `neondb_owner:` and `@`) in both URLs in `.env`, and deleted the `env.txt` file Neon downloaded. That file was NOT covered by `.gitignore` (it only blocks `.env`), so it could have been committed by mistake.
+- **Lesson:** Never select/highlight lines in `.env` while an AI assistant is open. Close the `.env` tab after editing. A leaked secret gets changed, not hidden.

@@ -1,11 +1,12 @@
 # CaseFlow — Learning Notes
 
 ## Current position
-**Week 1, Step 2 (Prisma + Neon), sub-step 2.1 — create a free Neon account + database**
+**Week 1, Step 2 (Prisma + Neon), sub-step 2.2 — install Prisma and create the User model**
 
-Step 1 is DONE and committed (`195eafb`). Next thing to do: sign up at neon.tech (free plan), create a
-project called `caseflow`, and copy the connection string into `api/.env` as `DATABASE_URL=...`
-(never into code or Git).
+⚠️ **Do this FIRST next session (before any Prisma work):**
+- **Rename keys in `api/.env`** to match `.env.example`: the pooled URL (has `-pooler`) → `DATABASE_URL`; the direct URL → `DIRECT_URL`. Save with Ctrl+S. (Password reset is already done ✅.)
+
+Then: install Prisma in `api/` and write the `User` model.
 
 Step 1 plan (sub-steps):
 - 1.1 Project folder + root `.gitignore`
@@ -26,6 +27,9 @@ Step 1 plan (sub-steps):
 - [x] 1.5 Express installed, `app.ts` + `server.ts` written, `npm run dev` works, `/health` returns `{"status":"ok"}`
 - [x] 1.6 `.env` + `.env.example` with `PORT=3000`, loaded by `dotenv`; `.gitignore` now ignores `node_modules/`, `dist/`, `.env` (tested with PORT=4000)
 - [x] 1.7 First commit `195eafb` — **Step 1 finished** ✅
+- [x] 2.1 Neon project `caseflow` created (Singapore, Postgres only); URLs saved in `api/.env`; `.env.example` has placeholders
+- [ ] 2.2 Install Prisma + User model
+- [ ] 2.3 First migration
 
 > Note: the project folder was moved and the old chat was lost. This file was rebuilt on
 > 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed.
@@ -43,7 +47,7 @@ Step 1 plan (sub-steps):
 | `api/tsconfig.json` | Settings for the TypeScript translator: where my code is (`src`), where output goes (`dist`), how strict to be. |
 | `api/src/app.ts` | Builds the Express app: reads JSON, has the `/health` route. Does NOT start it. |
 | `api/src/server.ts` | Loads `.env` first, then starts the app on `process.env.PORT` (the "on switch"). |
-| `api/.env` | My private settings/secrets (now just `PORT=3000`). Never committed. |
+| `api/.env` | My private settings/secrets: `PORT`, `DATABASE_URL` (pooled), `DIRECT_URL` (direct). Never committed. |
 | `api/.env.example` | Same keys with fake values — committed so others know which settings to create. |
 | `BUG_DIARY.md` | My list of mistakes: problem → cause → fix. |
 | `LEARNING_NOTES.md` | This file — where I am, what I learned, interview practice. |
@@ -87,6 +91,14 @@ Step 1 plan (sub-steps):
 - **dist/**: the folder where TypeScript puts the translated `.js` files when we build. Generated, so never committed.
 - **Commit source, not output**: don't commit what a tool can re-create (`node_modules/`, `dist/`). Do commit the recipe (`package.json`, `package-lock.json`, `src/`).
 - **LF vs CRLF warning**: Windows and Mac/Linux mark line endings differently; Git converts them automatically. Harmless.
+
+- **Neon**: a free online PostgreSQL database. Both my laptop and (later) Render can connect to it.
+- **Connection string**: one line with everything needed to reach the database: user, password, host, database name. It's a secret.
+- **Direct vs pooled URL**: direct = the app talks to the database itself; pooled (`-pooler`) = a middleman shares a few connections among many requests (like a taxi stand). App uses pooled; migrations use direct.
+- **Same keys in `.env` and `.env.example`**: the code asks for values by name, so names must match; only the values differ.
+- **Parts of a connection string**: `postgresql://USER:PASSWORD@HOST/DATABASE?options`. The password is between `USER:` and `@`.
+- **Database role password vs account password**: the account password logs *me* into the Neon website; the role password (`neondb_owner`) logs *my app* into the database.
+- **IDE selection is sent to the AI**: highlighting lines in VS Code shares them with the assistant. Never select lines in `.env`.
 
 ---
 
