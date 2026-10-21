@@ -1,0 +1,5 @@
+# My personal notes folder — not part of the project code
+Notes/
+node_modules/
+dist/
+.env
