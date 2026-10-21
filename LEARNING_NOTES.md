@@ -3,19 +3,27 @@
 ## Current position
 **Week 1, Step 2 (Prisma + Neon), sub-step 2.2 — install Prisma and create the User model**
 
+**Overall progress (2026-10-21):** Step 1 of 25 done + Step 2.1. About 3 days behind plan (Week 1 = Steps 1–7). Need ~1 step per study day from now.
+
 ⚠️ **Do this FIRST next session (before any Prisma work):**
 - **Rename keys in `api/.env`** to match `.env.example`: the pooled URL (has `-pooler`) → `DATABASE_URL`; the direct URL → `DIRECT_URL`. Save with Ctrl+S. (Password reset is already done ✅.)
 
-Then: install Prisma in `api/` and write the `User` model.
+Then 2.2:
+1. Inside `api/` (check `pwd`): `npm install -D prisma`, `npm install @prisma/client`, `npx prisma init`.
+   Check afterwards that `prisma init` did NOT overwrite the URLs in `.env`.
+2. I write the `User` model myself in `api/prisma/schema.prisma` (enum Role ADMIN/TEAM_LEAD/AGENT; fields from the
+   `users` table in CLAUDE.md; use `@unique`, `@default`, `@map` for snake_case columns, `@@map("users")`).
+3. ⛔ Do NOT run any `prisma migrate` yet — Claude must first review `schema.prisma` + `prisma.config.ts`
+   (newest Prisma changed how URLs are configured; app uses pooled `DATABASE_URL`, migrations use `DIRECT_URL`).
+4. Commit: `git commit -m "Step 2.2: install Prisma and add User model"`.
 
-Step 1 plan (sub-steps):
-- 1.1 Project folder + root `.gitignore`
-- 1.2 Start Git (`git init`)
-- 1.3 Create `api/` folder and `package.json` (`npm init`)
-- 1.4 Install TypeScript and write `tsconfig.json`
-- 1.5 Install Express and make a `/health` route
-- 1.6 Create `.env` (secrets file) and make sure Git ignores it
-- 1.7 First Git commit
+Step 2 plan (sub-steps):
+- 2.1 Neon account + database, URLs in `.env` ✅
+- 2.2 Install Prisma + write User model
+- 2.3 First migration (create the `users` table) + explain migrations
+
+How I like to work (for a new chat): short bullet-point answers, no long paragraphs. Ask me the real clock
+time before setting time targets.
 
 ---
 
