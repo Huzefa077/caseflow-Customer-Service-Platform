@@ -4,7 +4,8 @@
 I'm Huzaifa, a junior developer. Treat me as a fresher: I am NOT an expert and I learn slowly.
 I'm building this to truly understand full-stack development (backend focus) so I can explain
 every part in job interviews. If you write everything for me, this project is useless to me.
-Deadline: about 4 weeks at 3–4 hours a day. Keeping it doable matters more than adding features.
+Deadline: originally about 4 weeks at 3–4 hours a day; it can be extended. Project quality matters
+more than the deadline — but every task gets a time box so I don't go too deep on one concept.
 
 ## How you must work with me (most important — follow every time)
 1. Act as my teacher, not just a code generator.
@@ -35,8 +36,11 @@ Deadline: about 4 weeks at 3–4 hours a day. Keeping it doable matters more tha
 11. Everything must be FREE. Never put secrets (passwords, database URLs, JWT secrets) in code or
     Git — only in .env, and keep .env in .gitignore.
 12. If I say "slow down" or "I don't get it", stop and re-explain with a simpler example.
-13. Do NOT add features outside this file. If I'm behind schedule, tell me honestly and suggest
-    what to cut — never silently skip a revision step.
+13. Do NOT add features outside this file. If I'm behind schedule, tell me honestly how far behind
+    and the new estimated finish date. NEVER suggest cutting modules, stretch items or revision
+    steps — project quality matters more than the deadline; the deadline moves instead.
+14. Give every task a time box. I go "depth-first" and can lose a whole day on one concept, so if
+    I go too deep, stop me and park the question in LEARNING_NOTES "Open questions" for later.
 
 ## What we are building
 An internal CSM (Customer Service Management) platform for one company's support team.

@@ -1,21 +1,25 @@
 # CaseFlow — Learning Notes
 
 ## Current position
-**Week 1, Step 2 (Prisma + Neon), sub-step 2.2 — install Prisma and create the User model**
+**Week 1, Step 2 (Prisma + Neon), sub-step 2.2 — writing the User model in `api/prisma/schema.prisma`**
 
-**Overall progress (2026-10-21):** Step 1 of 25 done + Step 2.1. About 3 days behind plan (Week 1 = Steps 1–7). Need ~1 step per study day from now.
+**Today's goal (2026-10-25): finish ALL of Step 2 — 2.2 (User model → validate → commit) + 2.3 (first migration → `users` table visible in Neon → commit). (24 Oct goal not done; carried over.)**
 
-⚠️ **Do this FIRST next session (before any Prisma work):**
-- **Rename keys in `api/.env`** to match `.env.example`: the pooled URL (has `-pooler`) → `DATABASE_URL`; the direct URL → `DIRECT_URL`. Save with Ctrl+S. (Password reset is already done ✅.)
+**Overall progress (2026-10-25):** Step 1 + 2.1 done, 2.2 in progress. Plan says Step 7 should be done by now → about 5 steps (~5 days) behind. Decision: cut nothing, extend the deadline.
 
-Then 2.2:
-1. Inside `api/` (check `pwd`): `npm install -D prisma`, `npm install @prisma/client`, `npx prisma init`.
-   Check afterwards that `prisma init` did NOT overwrite the URLs in `.env`.
-2. I write the `User` model myself in `api/prisma/schema.prisma` (enum Role ADMIN/TEAM_LEAD/AGENT; fields from the
-   `users` table in CLAUDE.md; use `@unique`, `@default`, `@map` for snake_case columns, `@@map("users")`).
-3. ⛔ Do NOT run any `prisma migrate` yet — Claude must first review `schema.prisma` + `prisma.config.ts`
-   (newest Prisma changed how URLs are configured; app uses pooled `DATABASE_URL`, migrations use `DIRECT_URL`).
-4. Commit: `git commit -m "Step 2.2: install Prisma and add User model"`.
+Already done in 2.2 ✅:
+- `.env` keys renamed: `DATABASE_URL` = pooled (`-pooler`), `DIRECT_URL` = direct. `.env.example` matches.
+- Installed `prisma@7.10.1` (dev) + `@prisma/client@7.10.1` (pinned: npm "latest" was an unfinished 8.0 RC).
+- `npx prisma init` → created `prisma/schema.prisma`, `prisma.config.ts` (renamed from `prisma7.config.ts`), `api/.gitignore`.
+- Deleted the AI "skills" folders init added (`.agents/`, `.claude/`, `.windsurf/`, `skills-lock.json`).
+- `prisma.config.ts` uses `DIRECT_URL` (it's only used by Prisma's CLI, e.g. migrations).
+- Fixed red line "Cannot find name 'process'" in `prisma.config.ts` with `/// <reference types="node" />` (BUG_DIARY #5).
+
+Next:
+1. ✅ `User` model + `enum Role` written (reviewed, correct).
+2. ✅ `npx prisma validate` → "valid 🚀".
+3. Commit: `git commit -m "Step 2.2: install Prisma and add User model"`.
+4. Then 2.3: first migration. ⛔ No `prisma migrate` before review.
 
 Step 2 plan (sub-steps):
 - 2.1 Neon account + database, URLs in `.env` ✅
@@ -36,7 +40,7 @@ time before setting time targets.
 - [x] 1.6 `.env` + `.env.example` with `PORT=3000`, loaded by `dotenv`; `.gitignore` now ignores `node_modules/`, `dist/`, `.env` (tested with PORT=4000)
 - [x] 1.7 First commit `195eafb` — **Step 1 finished** ✅
 - [x] 2.1 Neon project `caseflow` created (Singapore, Postgres only); URLs saved in `api/.env`; `.env.example` has placeholders
-- [ ] 2.2 Install Prisma + User model
+- [x] 2.2 Prisma installed (7.10.1), `prisma.config.ts` uses `DIRECT_URL`, `User` model + `Role` enum written, `npx prisma validate` passes
 - [ ] 2.3 First migration
 
 > Note: the project folder was moved and the old chat was lost. This file was rebuilt on
@@ -56,6 +60,9 @@ time before setting time targets.
 | `api/src/app.ts` | Builds the Express app: reads JSON, has the `/health` route. Does NOT start it. |
 | `api/src/server.ts` | Loads `.env` first, then starts the app on `process.env.PORT` (the "on switch"). |
 | `api/.env` | My private settings/secrets: `PORT`, `DATABASE_URL` (pooled), `DIRECT_URL` (direct). Never committed. |
+| `api/prisma/schema.prisma` | The database blueprint: `generator` (makes TS code), `datasource` (PostgreSQL), `enum Role`, `model User` → `users` table. |
+| `api/prisma.config.ts` | Prisma's settings card: where the schema and migrations are, and which URL the CLI uses (`DIRECT_URL`). |
+| `api/.gitignore` | Made by `prisma init`: ignores `node_modules`, `.env`, and the generated Prisma code. |
 | `api/.env.example` | Same keys with fake values — committed so others know which settings to create. |
 | `BUG_DIARY.md` | My list of mistakes: problem → cause → fix. |
 | `LEARNING_NOTES.md` | This file — where I am, what I learned, interview practice. |
@@ -106,6 +113,17 @@ time before setting time targets.
 - **Same keys in `.env` and `.env.example`**: the code asks for values by name, so names must match; only the values differ.
 - **Parts of a connection string**: `postgresql://USER:PASSWORD@HOST/DATABASE?options`. The password is between `USER:` and `@`.
 - **Database role password vs account password**: the account password logs *me* into the Neon website; the role password (`neondb_owner`) logs *my app* into the database.
+- **TypeScript (checker) vs Node (runner)**: red lines come from TypeScript checking code; Node just runs it. TypeScript knows Node words like `process` only when `@types/node` is loaded for that file.
+- **Prisma `prisma.config.ts`**: Prisma's settings card — where the schema is, where migrations go, which database URL the CLI uses (`DIRECT_URL`).
+- **Version pinning**: `npm install prisma@7.10.1` installs that exact version instead of whatever "latest" points to.
+- **Folder rule (any project) — ask "who reads this file?"**: root of `api/` = settings files tools read (`package.json`, `tsconfig.json`, `.env`, `prisma.config.ts`) · `src/` = code I write that the app runs · tool folders = owned by a tool (`prisma/`, `node_modules/`, `dist/`).
+- **Why `prisma/` is outside `src/`**: it's not app code — it's the database blueprint (in Prisma's own language) + migration history, read by the Prisma CLI. `prisma init` puts it there by convention.
+- **`schema.prisma`**: "schema" = the blueprint of the database (tables, columns, rules). `.prisma` = Prisma's own little language, not TypeScript.
+- **How to learn a structure without AI**: don't invent it — the tool's `init` command and its "Getting started" docs create the standard layout. Copy the convention, then ask "who reads this file?"
+- **Prisma model**: blueprint of one table (like one Excel sheet); each line = one column: `name  Type  @rules`.
+- **enum**: a fixed list of allowed values (a dropdown), e.g. `Role` = ADMIN / TEAM_LEAD / AGENT.
+- **Attributes (rules)**: `@id` = row's ID · `@default(x)` = auto-fill if empty (`uuid()`, `now()`, `true`) · `@unique` = no duplicates · `@map("x")` = column name in the DB · `@@map("users")` = table name (`@@` = whole table).
+- **camelCase vs snake_case**: TypeScript uses `passwordHash`, databases use `password_hash`; `@map` connects them.
 - **IDE selection is sent to the AI**: highlighting lines in VS Code shares them with the assistant. Never select lines in `.env`.
 
 ---
@@ -125,6 +143,10 @@ time before setting time targets.
 - `git add .` — puts all changed files (except ignored ones) into the staging area.
 - `git commit -m "message"` — saves a snapshot of the staged files with a message.
 - `git log --oneline` — shows the history of commits, one line each.
+- `npm install -D prisma@7.10.1` — installs the Prisma command tool (dev only), pinned to a stable version.
+- `npm install @prisma/client@7.10.1` — installs the code the app uses to talk to the database.
+- `npx prisma init` — creates `prisma/schema.prisma`, `prisma.config.ts` and `.gitignore`.
+- `npx prisma validate` — checks `schema.prisma` + `prisma.config.ts` for mistakes without touching the database.
 - `npx tsc --showConfig` — prints the TypeScript settings it actually understood (good for catching typos).
 
 ---
@@ -141,6 +163,7 @@ time before setting time targets.
 ---
 
 ## Open questions / things I found confusing
+- **Behind schedule (2026-10-25)**: ~5 steps behind. DECISION: cut nothing — keep all modules, stretch items and revision steps; the deadline moves instead. Project quality > deadline.
 - Why `Notes/` didn't appear in `git status` — I thought it was because I added it before `git init`. (Answer: it's because `Notes/` is written inside `.gitignore`; the order doesn't matter.)
 - Is this project "impressive"? (Answer: interviewers judge how well I explain decisions — auth, transactions, permissions, SLA — and that it's deployed and tested. AI intake is now stretch item 3.)
 - Dev vs normal dependency was confusing at first — see the cement/scaffolding example above.

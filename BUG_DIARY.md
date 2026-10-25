@@ -35,3 +35,11 @@ Each entry: **Problem → Cause → Fix** (and the lesson).
 - **Cause:** I selected lines in `api/.env` in VS Code. The IDE automatically shares selected text with the assistant as context.
 - **Fix:** Reset the `neondb_owner` password in Neon (Branches → production → Roles), replaced the password part (between `neondb_owner:` and `@`) in both URLs in `.env`, and deleted the `env.txt` file Neon downloaded. That file was NOT covered by `.gitignore` (it only blocks `.env`), so it could have been committed by mistake.
 - **Lesson:** Never select/highlight lines in `.env` while an AI assistant is open. Close the `.env` tab after editing. A leaked secret gets changed, not hidden.
+
+---
+
+## 5. Red error "Cannot find name 'process'" in `prisma.config.ts` (2026-10-24, Step 2.2)
+- **Problem:** VS Code underlined `process` in `api/prisma.config.ts`.
+- **Cause:** `tsconfig.json` has `"include": ["src"]`. Files outside `src/` get TypeScript's default settings, which don't load Node's type labels (`@types/node`). Only the *checker* was confused — Node and Prisma run the file fine.
+- **Fix:** Added `/// <reference types="node" />` on line 1 of `prisma.config.ts` ("load Node's type labels for this file").
+- **Lesson:** Red lines come from TypeScript (the checker), not Node (the runner). Keep the editor at zero red lines so real errors never hide among "harmless" ones.
