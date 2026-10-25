@@ -1,33 +1,35 @@
 # CaseFlow — Learning Notes
 
 ## Current position
-**Week 1, Step 2 (Prisma + Neon), sub-step 2.2 — writing the User model in `api/prisma/schema.prisma`**
+**Week 1 — Step 2 (Prisma + Neon) DONE ✅. Next: Step 3 (create-user + login: bcrypt, JWT access token).**
 
-**Today's goal (2026-10-25): finish ALL of Step 2 — 2.2 (User model → validate → commit) + 2.3 (first migration → `users` table visible in Neon → commit). (24 Oct goal not done; carried over.)**
+**Last session (2026-10-25):** finished 2.2 (commit `d9e5036`) and 2.3 — first migration `20261025065144_init`
+created the `users` table in Neon (commit `0df50b3`).
 
-**Overall progress (2026-10-25):** Step 1 + 2.1 done, 2.2 in progress. Plan says Step 7 should be done by now → about 5 steps (~5 days) behind. Decision: cut nothing, extend the deadline.
+**Still to do before Step 3 (5 min):**
+1. Check Neon website → Tables: `users` (7 columns, 0 rows) + `_prisma_migrations` should be there.
+2. Commit the notes: from `CaseFlow/` root → `git add .` → `git commit -m "Update notes: Step 2 finished"` → `git push`.
 
-Already done in 2.2 ✅:
-- `.env` keys renamed: `DATABASE_URL` = pooled (`-pooler`), `DIRECT_URL` = direct. `.env.example` matches.
-- Installed `prisma@7.10.1` (dev) + `@prisma/client@7.10.1` (pinned: npm "latest" was an unfinished 8.0 RC).
-- `npx prisma init` → created `prisma/schema.prisma`, `prisma.config.ts` (renamed from `prisma7.config.ts`), `api/.gitignore`.
-- Deleted the AI "skills" folders init added (`.agents/`, `.claude/`, `.windsurf/`, `skills-lock.json`).
-- `prisma.config.ts` uses `DIRECT_URL` (it's only used by Prisma's CLI, e.g. migrations).
-- Fixed red line "Cannot find name 'process'" in `prisma.config.ts` with `/// <reference types="node" />` (BUG_DIARY #5).
-
-Next:
-1. ✅ `User` model + `enum Role` written (reviewed, correct).
-2. ✅ `npx prisma validate` → "valid 🚀".
-3. Commit: `git commit -m "Step 2.2: install Prisma and add User model"`.
-4. Then 2.3: first migration. ⛔ No `prisma migrate` before review.
-
-Step 2 plan (sub-steps):
-- 2.1 Neon account + database, URLs in `.env` ✅
-- 2.2 Install Prisma + write User model
-- 2.3 First migration (create the `users` table) + explain migrations
+**Overall progress:** Steps 1–2 done. Plan says Step 7 should be done by now → about 5 steps behind.
+Decision: cut nothing, extend the deadline. Every task gets a time box (CLAUDE.md rule 14).
 
 How I like to work (for a new chat): short bullet-point answers, no long paragraphs. Ask me the real clock
-time before setting time targets.
+time before setting time targets. I type all code/config myself; Claude keeps these notes + BUG_DIARY updated.
+
+---
+
+## Recipe: how I set up Prisma (reuse in my next project)
+1. Get 2 database URLs (Neon): pooled (`-pooler`) → `DATABASE_URL`, direct → `DIRECT_URL` in `.env`. Fake copies in `.env.example`.
+2. `pwd` (must be inside `api/`), then `npm install -D prisma@<stable>` + `npm install @prisma/client@<stable>`
+   (check `npm view prisma dist-tags` first — never install an `rc` version).
+3. `npx prisma init` → creates `prisma/schema.prisma`, `prisma.config.ts`, `.gitignore`. Check it didn't touch my real URLs in `.env`.
+   Delete extra AI "skills" folders if it adds them.
+4. `prisma.config.ts`: `url: process.env["DIRECT_URL"]` (CLI/migrations use the direct URL).
+   If `process` is red, add `/// <reference types="node" />` on line 1.
+5. `schema.prisma`: write `enum`s + `model`s (`name  Type  @rules`, `@@map("table")`).
+6. `npx prisma validate` → "valid 🚀".
+7. `git status` (no `.env`!) → commit → push.
+8. `npx prisma migrate dev --name <name>` → creates the tables (Step 2.3).
 
 ---
 
@@ -41,7 +43,7 @@ time before setting time targets.
 - [x] 1.7 First commit `195eafb` — **Step 1 finished** ✅
 - [x] 2.1 Neon project `caseflow` created (Singapore, Postgres only); URLs saved in `api/.env`; `.env.example` has placeholders
 - [x] 2.2 Prisma installed (7.10.1), `prisma.config.ts` uses `DIRECT_URL`, `User` model + `Role` enum written, `npx prisma validate` passes
-- [ ] 2.3 First migration
+- [x] 2.3 First migration `20261025065144_init` → `users` table + `Role` enum created in Neon — **Step 2 finished** ✅
 
 > Note: the project folder was moved and the old chat was lost. This file was rebuilt on
 > 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed.
@@ -63,6 +65,8 @@ time before setting time targets.
 | `api/prisma/schema.prisma` | The database blueprint: `generator` (makes TS code), `datasource` (PostgreSQL), `enum Role`, `model User` → `users` table. |
 | `api/prisma.config.ts` | Prisma's settings card: where the schema and migrations are, and which URL the CLI uses (`DIRECT_URL`). |
 | `api/.gitignore` | Made by `prisma init`: ignores `node_modules`, `.env`, and the generated Prisma code. |
+| `api/prisma/migrations/20261025065144_init/migration.sql` | The SQL Prisma wrote: `CREATE TYPE "Role"`, `CREATE TABLE "users"`, unique index on email. Never edit after it ran. |
+| `api/prisma/migrations/migration_lock.toml` | Says "these migrations are for PostgreSQL". Don't edit. |
 | `api/.env.example` | Same keys with fake values — committed so others know which settings to create. |
 | `BUG_DIARY.md` | My list of mistakes: problem → cause → fix. |
 | `LEARNING_NOTES.md` | This file — where I am, what I learned, interview practice. |
@@ -124,6 +128,12 @@ time before setting time targets.
 - **enum**: a fixed list of allowed values (a dropdown), e.g. `Role` = ADMIN / TEAM_LEAD / AGENT.
 - **Attributes (rules)**: `@id` = row's ID · `@default(x)` = auto-fill if empty (`uuid()`, `now()`, `true`) · `@unique` = no duplicates · `@map("x")` = column name in the DB · `@@map("users")` = table name (`@@` = whole table).
 - **camelCase vs snake_case**: TypeScript uses `passwordHash`, databases use `password_hash`; `@map` connects them.
+- **Migration**: a saved SQL file that changes the database structure, in order (like Git commits for the database). Committed to Git so any database can be rebuilt the same way.
+- **Migration ≠ backup**: a migration saves *structure* (tables, columns), not *data*. To fix a mistake, write a NEW migration. Data is restored from backups (Neon has these).
+- **Schema → SQL**: `String` → `TEXT`, `Boolean` → `BOOLEAN`, `@id` → `PRIMARY KEY`, `@unique` → `UNIQUE INDEX`, `@default(now())` → `DEFAULT CURRENT_TIMESTAMP`. No `?` on a field → `NOT NULL` (required).
+- **`_prisma_migrations` table**: Prisma's own diary in the database of which migrations already ran.
+- **`git add .` = this folder and below only**: run from `api/`, it misses root files like `LEARNING_NOTES.md`. Run it from the repo root (or use `git add -A`) to include everything.
+- **`npx` "Need to install …"**: means the tool isn't in this folder's `node_modules` → I'm in the wrong folder. Say no, check `pwd`.
 - **IDE selection is sent to the AI**: highlighting lines in VS Code shares them with the assistant. Never select lines in `.env`.
 
 ---
@@ -147,6 +157,8 @@ time before setting time targets.
 - `npm install @prisma/client@7.10.1` — installs the code the app uses to talk to the database.
 - `npx prisma init` — creates `prisma/schema.prisma`, `prisma.config.ts` and `.gitignore`.
 - `npx prisma validate` — checks `schema.prisma` + `prisma.config.ts` for mistakes without touching the database.
+- `npx prisma migrate dev --name init` — compares schema with the database, writes a migration SQL file, and runs it on Neon.
+- `git push` — uploads my commits to GitHub.
 - `npx tsc --showConfig` — prints the TypeScript settings it actually understood (good for catching typos).
 
 ---
@@ -159,6 +171,14 @@ time before setting time targets.
    Put them in a `.env` file, load them with dotenv into `process.env`, add `.env` to `.gitignore`, and commit only a `.env.example` with fake values. If a secret is ever committed, change (rotate) it.
 3. **What's the difference between `dependencies` and `devDependencies`?**
    dependencies are needed while the app runs (Express, dotenv). devDependencies are only needed while coding (TypeScript, tsx, @types).
+
+### Step 2 — Prisma + Neon
+1. **What is an ORM and why use Prisma?**
+   ORM = Object-Relational Mapper: I write TypeScript (`prisma.user.create(...)`) and it writes the SQL. Prisma also gives typed results and manages migrations.
+2. **What is a migration and why commit it?**
+   A saved SQL file that changes the database structure. Committed to Git so every database (local, test, production) is built the same way, in order, and changes can be reviewed.
+3. **Why two database URLs?**
+   The app uses the pooled URL (a middleman shares connections, good for many requests). Migrations use the direct URL, because schema changes need one real, stable connection.
 
 ---
 

@@ -43,3 +43,11 @@ Each entry: **Problem → Cause → Fix** (and the lesson).
 - **Cause:** `tsconfig.json` has `"include": ["src"]`. Files outside `src/` get TypeScript's default settings, which don't load Node's type labels (`@types/node`). Only the *checker* was confused — Node and Prisma run the file fine.
 - **Fix:** Added `/// <reference types="node" />` on line 1 of `prisma.config.ts` ("load Node's type labels for this file").
 - **Lesson:** Red lines come from TypeScript (the checker), not Node (the runner). Keep the editor at zero red lines so real errors never hide among "harmless" ones.
+
+---
+
+## 6. `npx prisma` wanted to download `prisma@8.0.0-rc.27` (2026-10-25, Step 2.3)
+- **Problem:** `npx prisma migrate dev ...` asked "Need to install prisma@8.0.0-rc.27. Ok to proceed?"
+- **Cause:** The terminal was in `CaseFlow/` (root), not `CaseFlow/api/` — I did `cd ..` for `git status` and stayed there. `npx` first looks for the tool in the current folder's `node_modules`; not found → it offers to download the newest version (an unfinished RC). Also typed `--name.init` instead of `--name init`.
+- **Fix:** Ctrl+C to stop, `cd api`, `pwd`, then ran `npx prisma migrate dev --name init` again. Nothing was created in the root folder.
+- **Lesson:** If `npx` says "Need to install", STOP — it means I'm in the wrong folder. Run `pwd` before every `npx`/`npm` command.
