@@ -1,3 +1,7 @@
+// WHAT: the database blueprint — tables (models), their columns, and enums.
+// WHY:  Prisma reads it to create tables (`npx prisma migrate dev`) and to
+//       generate TypeScript code (`npx prisma generate`). Re-run both after changes.
+
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
