@@ -1,6 +1,7 @@
 // WHAT: the login logic — find the user by email and check the password.
 // WHY:  kept apart from HTTP code (controller) so it's simple to test and reuse.
 
+import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { prisma } from "../../config/db";
 
@@ -15,15 +16,22 @@ export async function login (email: string, password: string){
         throw new Error("Invalid email or password");
     }
 
-    return {id: user.id, name: user.name, email: user.email, role: user.role};
+    const secret = process.env.JWT_ACCESS_SECRET;
+    if(!secret){
+        throw new Error("JWT_ACCESS_SECRET is missing in .env");
+    }
+
+    const accessToken = jwt.sign(
+        { sub: user.id, role: user.role },
+        secret,
+        { expiresIn: "15m"}
+    );
+
+    return {
+        user: { id: user.id, name: user.name, email: user.email, role: user.role },
+        accessToken,
+    };
 }
-
-
-
-
-
-
-
 
 
 
@@ -38,4 +46,7 @@ export async function login (email: string, password: string){
 //   1. find the user by email
 //   2. no user, or deactivated? → stop with an error
 //   3. does the password match the saved hash?
-//   4. yes → return the user (without the hash)
+//   4. password matches -> continue
+//   5. make a JWT access token (id + role, signed with the secret, valid 15 min)
+//   6. return the user + the token
+

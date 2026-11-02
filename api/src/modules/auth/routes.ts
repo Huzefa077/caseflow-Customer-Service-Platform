@@ -12,35 +12,7 @@ export default router;
 
 
 
-
-
-
-
-
-
 // ─── STEPS (what this file does, in plain words) ───
 //   1. make a Router (a mini list of URLs for auth)
 //   2. POST /login → run loginController
 //   3. export it, so app.ts can plug it in
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
-//
-//
-//
-//
-//

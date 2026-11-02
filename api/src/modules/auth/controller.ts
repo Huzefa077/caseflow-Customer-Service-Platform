@@ -9,16 +9,12 @@ export async function loginController( req: Request, res: Response){
     const {email,password} = req.body;
 
     try{
-        const user = await login(email, password);
-        res.status(200).json({user});
+        const { user, accessToken } = await login(email, password);
+        res.status(200).json({user, accessToken});  //users first login will give not only his data, but also a JWT token which will be later verfied by the server in every single URL navigations.
     }catch(err){
         res.status(401).json({message: "Invalid email or password"});
     }
 }
-
-
-
-
 
 
 
