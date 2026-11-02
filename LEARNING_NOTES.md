@@ -1,189 +1,496 @@
 # CaseFlow — Learning Notes
 
-## Current position
-**Week 1 — Step 2 (Prisma + Neon) DONE ✅. Next: Step 3 (create-user + login: bcrypt, JWT access token).**
+**Sections in this file:**
 
-**Last session (2026-10-25):** finished 2.2 (commit `d9e5036`) and 2.3 — first migration `20261025065144_init`
-created the `users` table in Neon (commit `0df50b3`).
+1. Current position
+2. Progress & schedule
+3. How I learn
+4. Recipe: Prisma setup
+5. Done so far
+6. Files created or changed
+7. Concepts learned
+8. Commands I ran
+9. Interview questions
+10. Open questions
 
-**Still to do before Step 3 (5 min):**
-1. Check Neon website → Tables: `users` (7 columns, 0 rows) + `_prisma_migrations` should be there.
-2. Commit the notes: from `CaseFlow/` root → `git add .` → `git commit -m "Update notes: Step 2 finished"` → `git push`.
+> Daily to-do list lives in `TO-DO.txt`.
 
-**Overall progress:** Steps 1–2 done. Plan says Step 7 should be done by now → about 5 steps behind.
-Decision: cut nothing, extend the deadline. Every task gets a time box (CLAUDE.md rule 14).
-
-How I like to work (for a new chat): short bullet-point answers, no long paragraphs. Ask me the real clock
-time before setting time targets. I type all code/config myself; Claude keeps these notes + BUG_DIARY updated.
-
----
-
-## Recipe: how I set up Prisma (reuse in my next project)
-1. Get 2 database URLs (Neon): pooled (`-pooler`) → `DATABASE_URL`, direct → `DIRECT_URL` in `.env`. Fake copies in `.env.example`.
-2. `pwd` (must be inside `api/`), then `npm install -D prisma@<stable>` + `npm install @prisma/client@<stable>`
-   (check `npm view prisma dist-tags` first — never install an `rc` version).
-3. `npx prisma init` → creates `prisma/schema.prisma`, `prisma.config.ts`, `.gitignore`. Check it didn't touch my real URLs in `.env`.
-   Delete extra AI "skills" folders if it adds them.
-4. `prisma.config.ts`: `url: process.env["DIRECT_URL"]` (CLI/migrations use the direct URL).
-   If `process` is red, add `/// <reference types="node" />` on line 1.
-5. `schema.prisma`: write `enum`s + `model`s (`name  Type  @rules`, `@@map("table")`).
-6. `npx prisma validate` → "valid 🚀".
-7. `git status` (no `.env`!) → commit → push.
-8. `npx prisma migrate dev --name <name>` → creates the tables (Step 2.3).
+<br>
 
 ---
 
-## Done so far
+## 1. Current position
+
+| | |
+|---|---|
+| **Week** | 1 |
+| **Step** | 3 — create-user + login |
+| **Sub-step** | 3.6 — Postman checks + commit + first PR |
+| **Git branch** | `step-3-login` |
+
+**Next thing to do:**
+
+- Postman: right password → 200 + `accessToken`; wrong password / wrong email → 401
+- From root: `git status` (no `.env`!) → `git add .` → commit → `git push`
+- GitHub: PR `step-3-login` → `main` → read the changes → merge → `git switch main` → `git pull`
+
+**Step 3 status:**
+
+| Sub-step | Time box | Status |
+|---|---|---|
+| 3.1 Connect app to DB | 30 min | ✅ `db.ts` connects, test counted 0 users · `sslmode=verify-full` fixed |
+| 3.2 bcrypt | 20 min | ✅ |
+| 3.3 First Admin script | 40 min | ✅ |
+| 3.4 `POST /auth/login` | 40 min | ✅ service + controller + routes, wired in `app.ts` under `/auth`, tested in Postman |
+| 3.5 JWT | 40 min | ✅ login returns `{ user, accessToken }`, payload checked on jwt.io |
+| 3.6 Postman test + commit | 20 min | ⬜ |
+
+> 3.1–3.4 are committed and pushed to GitHub branch `step-3-login`.
+
+**Pending check questions:**
+
+1. ✅ Why the same login error message? → So an attacker can't learn which emails exist ("user enumeration").
+2. ⬜ PR base vs compare — which is which?
+
+> Skipped the 3.1 check questions + rewrite-from-memory for now — my choice.
+
+<br>
+
+---
+
+## 2. Progress & schedule
+
+**Overall (2026-10-31):**
+
+- Steps 1–2 done, Step 3 almost done (~2.7 of 25 steps in 13 days)
+- Nov 18 is not realistic
+
+**New estimate:**
+
+| Milestone | Target date |
+|---|---|
+| Step 7 | Nov 7 |
+| Step 13 | Nov 15 |
+| Step 19 | Nov 24 |
+| Core Steps 1–25 | ~Dec 5 |
+| Stretch items | ~Dec 15 |
+
+> Needs ~0.8 step/day.
+> **Decision:** cut nothing, extend the deadline. Every task gets a time box (CLAUDE.md rule 14).
+
+**Whole project:** 25 steps + 6 stretch items after Step 25.
+
+| Week | Steps |
+|---|---|
+| 1 | 1–7 |
+| 2 | 8–13 |
+| 3 | 14–19 |
+| 4 | 20–25 |
+
+**How I like to work (for a new chat):**
+
+- Short bullet-point answers, no long paragraphs
+- Ask me the real clock time before setting time targets
+- I type all code/config myself; Claude keeps these notes + BUG_DIARY updated
+
+**Session log:**
+
+- **2026-10-25:** finished 2.2 (commit `d9e5036`) and 2.3 — first migration `20261025065144_init` created the `users` table in Neon (commit `0df50b3`).
+  - Follow-ups at the time: check Neon → Tables (`users` with 7 columns + `_prisma_migrations`), then commit the notes from the `CaseFlow/` root.
+
+<br>
+
+---
+
+## 3. How I learn (from my mentor, 2026-10-26)
+
+**For each concept, 5 steps:**
+
+1. **Understand** — what problem does it solve?
+2. **Trace** — input, action, output
+3. **Reproduce** — write it without looking
+4. **Change** — one small change by myself
+5. **Explain** — as if an interviewer asked
+
+**Interview focus:**
+
+| Priority | Topics |
+|---|---|
+| **P1 (must)** | Request flow Express → DB → back · async/await, promises, try/catch · Prisma CRUD + migrations · tables, primary/foreign keys, basic SQL · HTTP methods, status codes, validation |
+| **P2 (enterprise)** | bcrypt · authentication vs authorization · error handling, env vars · relations, transactions, pagination · testing/debugging |
+| **P3 (later, only if needed)** | Connection-pool internals, DB optimization, microservices, deep Prisma/TS internals |
+
+> **Correction:** `prisma generate` only makes code from the schema. It does NOT connect to or sync Neon. `migrate dev` changes the real database.
+
+<br>
+
+---
+
+## 4. Recipe: how I set up Prisma (reuse in my next project)
+
+1. **Get 2 database URLs (Neon)**
+   - pooled (`-pooler`) → `DATABASE_URL`
+   - direct → `DIRECT_URL`
+   - both in `.env`, fake copies in `.env.example`
+
+2. **Install** (run `pwd` first — must be inside `api/`)
+   - `npm install -D prisma@<stable>`
+   - `npm install @prisma/client@<stable>`
+   - Check `npm view prisma dist-tags` first — never install an `rc` version
+
+3. **`npx prisma init`**
+   - Creates `prisma/schema.prisma`, `prisma.config.ts`, `.gitignore`
+   - Check it didn't touch my real URLs in `.env`
+   - Delete extra AI "skills" folders if it adds them
+
+4. **`prisma.config.ts`**
+   - `url: process.env["DIRECT_URL"]` (CLI/migrations use the direct URL)
+   - If `process` is red, add `/// <reference types="node" />` on line 1
+
+5. **`schema.prisma`** — write `enum`s + `model`s (`name  Type  @rules`, `@@map("table")`)
+
+6. **`npx prisma validate`** → "valid 🚀"
+
+7. **`git status`** (no `.env`!) → commit → push
+
+8. **`npx prisma migrate dev --name <name>`** → creates the tables (Step 2.3)
+
+<br>
+
+---
+
+## 5. Done so far
+
+### Step 1 — Setup ✅
+
 - [x] 1.1 Project folder `CaseFlow/` with `CLAUDE.md` and a `.gitignore` (ignores `Notes/` so far)
 - [x] 1.2 Started Git with `git init` — `git status` shows `Notes/` is ignored
 - [x] 1.3 Created `api/` folder and `package.json` with `npm init -y`
 - [x] 1.4 Installed TypeScript tools and wrote `tsconfig.json` (checked with `npx tsc --showConfig`)
 - [x] 1.5 Express installed, `app.ts` + `server.ts` written, `npm run dev` works, `/health` returns `{"status":"ok"}`
 - [x] 1.6 `.env` + `.env.example` with `PORT=3000`, loaded by `dotenv`; `.gitignore` now ignores `node_modules/`, `dist/`, `.env` (tested with PORT=4000)
-- [x] 1.7 First commit `195eafb` — **Step 1 finished** ✅
+- [x] 1.7 First commit `195eafb`
+
+### Step 2 — Prisma + Neon ✅
+
 - [x] 2.1 Neon project `caseflow` created (Singapore, Postgres only); URLs saved in `api/.env`; `.env.example` has placeholders
 - [x] 2.2 Prisma installed (7.10.1), `prisma.config.ts` uses `DIRECT_URL`, `User` model + `Role` enum written, `npx prisma validate` passes
-- [x] 2.3 First migration `20261025065144_init` → `users` table + `Role` enum created in Neon — **Step 2 finished** ✅
+- [x] 2.3 First migration `20261025065144_init` → `users` table + `Role` enum created in Neon
 
-> Note: the project folder was moved and the old chat was lost. This file was rebuilt on
-> 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed.
-> Git was not started yet and there was no `api/` folder.
+### Step 3 — Create-user + login ⏳
+
+- [x] 3.1 `npx prisma generate`, installed `@prisma/adapter-pg@7.10.1`, `npm audit fix`, wrote `src/config/db.ts` — test printed `Users in database: 0`
+- [x] 3.2 Installed `bcryptjs`; hashed `secret123` twice → 2 different hashes (salt); `bcrypt.compare` → `true` / `false`
+- [x] 3.3 `.env` has `ADMIN_EMAIL`/`ADMIN_PASSWORD` (fake ones in `.env.example`); `src/scripts/create-admin.ts` created the first Admin; 2nd run → `P2002` unique email error (expected)
+- [x] 3.4 `POST /auth/login`: `service.ts` (find user → `isActive` → `bcrypt.compare`), `controller.ts` (200 / 401), `routes.ts`, `app.use("/auth", authRoutes)` in `app.ts`; tested in Postman (2026-10-31)
+- [x] 3.5 Installed `jsonwebtoken` + `@types/jsonwebtoken`; 64-char `JWT_ACCESS_SECRET` in `.env`; `service.ts` signs `{ sub, role }` for `15m`; controller returns `{ user, accessToken }`; decoded on jwt.io (2026-11-01)
+- [ ] 3.6 Postman test + commit
+
+> **Note:** the project folder was moved and the old chat was lost. This file was rebuilt on 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed. Git was not started yet and there was no `api/` folder.
+
+<br>
 
 ---
 
-## Files created or changed
+## 6. Files created or changed
+
+### Project root (`CaseFlow/`)
+
 | File | What it does |
-|------|--------------|
+|---|---|
 | `CLAUDE.md` | The project plan and the rules for how Claude teaches me. |
-| `.gitignore` | A list of files/folders Git must ignore (never save): `Notes/`, `node_modules/`, `dist/`, `.env`. |
+| `README.md` | The project's front page on GitHub: what CaseFlow is, progress (done / planned), tech stack, how to run it. Update the checklist as features get built. |
+| `BUG_DIARY.md` | My list of mistakes: problem → cause → fix. |
+| `LEARNING_NOTES.md` | This file — where I am, what I learned, interview practice. |
+| `.gitignore` | Files/folders Git must ignore (never save): `Notes/`, `node_modules/`, `dist/`, `.env`. |
+
+### Backend settings (`api/`, outside `src/`)
+
+| File | What it does |
+|---|---|
 | `api/package.json` | The "ID card" of the backend: name, version, scripts, and list of installed packages. |
 | `api/package-lock.json` | Auto-made by npm: the exact versions installed. Don't edit by hand. |
 | `api/tsconfig.json` | Settings for the TypeScript translator: where my code is (`src`), where output goes (`dist`), how strict to be. |
-| `api/src/app.ts` | Builds the Express app: reads JSON, has the `/health` route. Does NOT start it. |
-| `api/src/server.ts` | Loads `.env` first, then starts the app on `process.env.PORT` (the "on switch"). |
 | `api/.env` | My private settings/secrets: `PORT`, `DATABASE_URL` (pooled), `DIRECT_URL` (direct). Never committed. |
-| `api/prisma/schema.prisma` | The database blueprint: `generator` (makes TS code), `datasource` (PostgreSQL), `enum Role`, `model User` → `users` table. |
-| `api/prisma.config.ts` | Prisma's settings card: where the schema and migrations are, and which URL the CLI uses (`DIRECT_URL`). |
+| `api/.env.example` | Same keys with fake values — committed so others know which settings to create. |
 | `api/.gitignore` | Made by `prisma init`: ignores `node_modules`, `.env`, and the generated Prisma code. |
+| `api/prisma.config.ts` | Prisma's settings card: where the schema and migrations are, and which URL the CLI uses (`DIRECT_URL`). |
+
+### Database (`api/prisma/`)
+
+| File | What it does |
+|---|---|
+| `api/prisma/schema.prisma` | The database blueprint: `generator` (makes TS code), `datasource` (PostgreSQL), `enum Role`, `model User` → `users` table. |
 | `api/prisma/migrations/20261025065144_init/migration.sql` | The SQL Prisma wrote: `CREATE TYPE "Role"`, `CREATE TABLE "users"`, unique index on email. Never edit after it ran. |
 | `api/prisma/migrations/migration_lock.toml` | Says "these migrations are for PostgreSQL". Don't edit. |
-| `api/.env.example` | Same keys with fake values — committed so others know which settings to create. |
-| `BUG_DIARY.md` | My list of mistakes: problem → cause → fix. |
-| `LEARNING_NOTES.md` | This file — where I am, what I learned, interview practice. |
+
+### App code (`api/src/`)
+
+| File | What it does |
+|---|---|
+| `api/src/app.ts` | Builds the Express app: reads JSON, has the `/health` route, plugs in `/auth`. Does NOT start it. |
+| `api/src/server.ts` | Loads `.env` first, then starts the app on `process.env.PORT` (the "on switch"). |
+| `api/src/config/db.ts` | Builds ONE shared `prisma` object (PrismaClient + `PrismaPg` adapter using `DATABASE_URL`). Other files import it. "The one phone everyone borrows." |
+| `api/src/generated/prisma/` | Code made by `npx prisma generate` from the schema (`client.ts`, `enums.ts`, `models/User.ts`). Git-ignored, never edit. |
+| `api/src/scripts/create-admin.ts` | One-time script: reads admin email/password from `.env`, hashes the password, saves an ADMIN user. |
+| `api/src/modules/auth/routes.ts` | `POST /login` → `loginController`. |
+| `api/src/modules/auth/controller.ts` | Reads `req.body`, calls the service, sends 200 or 401. |
+| `api/src/modules/auth/service.ts` | Login logic: find user → check `isActive` → `bcrypt.compare`. |
+
+<br>
 
 ---
 
-## Concepts learned
-- **Git**: a tool that saves "snapshots" (commits) of my project, so I can see history and go back if I break something.
-- **.gitignore**: a text file where I list things Git should never save — e.g. my private notes, `node_modules/`, and `.env` (secrets).
-- **Repository (repo)**: a project folder that Git is watching. `git init` creates it by adding a hidden `.git` folder, where all the history is stored.
-- **Untracked file**: a file Git can see but is not saving yet. `git add <file>` tells Git to include it in the next commit.
-- **.gitignore is read every time**: Git checks `.gitignore` each time you run a command, so it doesn't matter if you wrote it before or after `git init`. What matters is that the file is listed there *before its first commit* — once a file is committed, adding it to `.gitignore` later does not remove it from history.
-- **If a secret gets committed by mistake**: (1) `.gitignore` alone won't help — Git keeps tracking a file it already tracks; you need `git rm --cached .env` to stop tracking it. (2) Deleting the file doesn't remove it from old commits, so anyone can still find it in history. (3) The real fix: **change the secret** (new password / new key), so the leaked one is useless.
-- **npm (Node Package Manager)**: the tool that installs packages (code other people wrote) for Node.js.
-- **package.json fields**: `name` = project name · `version` = project version (1.0.0) · `main` = the starting file if someone imports this project · `scripts` = nicknames for terminal commands, run with `npm run <name>` · `license` = rules for how others may use the code · `type` = which import style Node uses (`commonjs` = the classic one).
+## 7. Concepts learned
 
-- **TypeScript**: JavaScript + types (labels like "this is a number"). Catches mistakes before the code runs. It gets translated into normal JavaScript.
-- **Normal vs dev dependency**: normal = the running app needs it (like cement in a house, e.g. Express). Dev (`-D`) = only needed while writing code (like scaffolding, e.g. TypeScript).
-- **node_modules/**: the folder where npm puts installed packages. Huge, and can be re-created any time with `npm install`, so Git must ignore it.
-- **Exact spelling in config files**: `compileOptions` instead of `compilerOptions` is silently ignored. Setting names are case-sensitive.
+### Git & GitHub
 
-- **Express**: a library that lets the app receive requests (like GET /health) and send replies.
-- **Route**: one address the app answers, e.g. `GET /health`. Like one phone extension.
-- **req / res**: request = what the user sent; response = what we send back.
-- **Port**: a numbered "door" on the computer the server listens at (ours: 3000).
-- **Why app.ts and server.ts are split**: app.ts builds the app, server.ts starts it. Tests can import the app without starting a real server.
-- **Entry file + imports**: Node starts at one file (server.ts) and follows its `import` lines like a tree to load the rest.
-- **Folder rule — feature first, then job**: `modules/cases/` holds routes (which URL), controller (read request/reply), service (business rules), schema (valid input). Files that change together live together. Create folders only when a file needs them.
-- **Monorepo**: one Git repository holding both `api/` and `web/`. Render and Vercel can each deploy just one sub-folder ("Root Directory").
-- **Why React + Vite, not Next.js**: a separate Express API keeps the backend clear and lets any client (web, Postman, a future bot) use it.
+- **Git** — a tool that saves "snapshots" (commits) of my project, so I can see history and go back if I break something.
+- **Repository (repo)** — a project folder that Git is watching. `git init` creates it by adding a hidden `.git` folder, where all the history is stored.
+- **Untracked file** — a file Git can see but is not saving yet. `git add <file>` tells Git to include it in the next commit.
+- **Commit** — one saved snapshot of the project with a message. `git add` puts files in the box (staging area); `git commit` seals and labels it.
+- **Commit hash** (e.g. `195eafb`) — the snapshot's unique ID, short version. Used to look at or go back to that snapshot.
+- **HEAD -> master** — "you are here": HEAD points to the latest commit on the current branch.
+- **Commit source, not output** — don't commit what a tool can re-create (`node_modules/`, `dist/`). Do commit the recipe (`package.json`, `package-lock.json`, `src/`).
+- **`git add .` = this folder and below only** — run from `api/`, it misses root files like `LEARNING_NOTES.md`. Run it from the repo root (or use `git add -A`).
+- **Commit habit** — at the end of each step, go to the root (`CaseFlow/`) and commit code + notes together in ONE commit (one step = one commit), then push.
+- **Git branch + PR** — `main` = safe version; each step on its own branch (`git switch -c step-3-login`); at the end push → Pull Request on GitHub → merge → `git switch main` + `git pull`.
+- **LF vs CRLF warning** — Windows and Mac/Linux mark line endings differently; Git converts them automatically. Harmless.
 
-- **.env**: a private file of `KEY=value` lines for secrets and settings. Code reads them, so secrets never live in code or Git.
-- **process.env**: Node's box of settings (environment variables). `dotenv` fills it from `.env`.
-- **.env.example**: a safe copy with fake values, committed so others know what to set up.
-- **Folder vs file in .gitignore**: `name/` matches only a folder; `name` matches a file (or folder).
-- **Fallbacks can hide bugs**: `process.env.PORT || 3000` kept working even when `.env` was broken. Test with a different value to prove a setting is really read.
+### .gitignore & secrets
 
-- **Commit**: one saved snapshot of the project with a message. `git add` puts files in the box (staging area); `git commit` seals and labels it.
-- **Commit hash** (e.g. `195eafb`): the snapshot's unique ID, short version. Used to look at or go back to that snapshot.
-- **HEAD -> master**: "you are here" — HEAD points to the latest commit on the `master` branch.
-- **dist/**: the folder where TypeScript puts the translated `.js` files when we build. Generated, so never committed.
-- **Commit source, not output**: don't commit what a tool can re-create (`node_modules/`, `dist/`). Do commit the recipe (`package.json`, `package-lock.json`, `src/`).
-- **LF vs CRLF warning**: Windows and Mac/Linux mark line endings differently; Git converts them automatically. Harmless.
+- **.gitignore** — a text file listing things Git should never save, e.g. private notes, `node_modules/`, `.env`.
+- **.gitignore is read every time** — order vs `git init` doesn't matter. What matters: the file is listed *before its first commit*. Once committed, adding it later does not remove it from history.
+- **Folder vs file in .gitignore** — `name/` matches only a folder; `name` matches a file (or folder).
+- **If a secret gets committed by mistake:**
+  1. `.gitignore` alone won't help — use `git rm --cached .env` to stop tracking it.
+  2. Deleting the file doesn't remove it from old commits.
+  3. The real fix: **change the secret** (new password / new key).
+- **IDE selection is sent to the AI** — highlighting lines in VS Code shares them with the assistant. Never select lines in `.env`.
 
-- **Neon**: a free online PostgreSQL database. Both my laptop and (later) Render can connect to it.
-- **Connection string**: one line with everything needed to reach the database: user, password, host, database name. It's a secret.
-- **Direct vs pooled URL**: direct = the app talks to the database itself; pooled (`-pooler`) = a middleman shares a few connections among many requests (like a taxi stand). App uses pooled; migrations use direct.
-- **Same keys in `.env` and `.env.example`**: the code asks for values by name, so names must match; only the values differ.
-- **Parts of a connection string**: `postgresql://USER:PASSWORD@HOST/DATABASE?options`. The password is between `USER:` and `@`.
-- **Database role password vs account password**: the account password logs *me* into the Neon website; the role password (`neondb_owner`) logs *my app* into the database.
-- **TypeScript (checker) vs Node (runner)**: red lines come from TypeScript checking code; Node just runs it. TypeScript knows Node words like `process` only when `@types/node` is loaded for that file.
-- **Prisma `prisma.config.ts`**: Prisma's settings card — where the schema is, where migrations go, which database URL the CLI uses (`DIRECT_URL`).
-- **Version pinning**: `npm install prisma@7.10.1` installs that exact version instead of whatever "latest" points to.
-- **Folder rule (any project) — ask "who reads this file?"**: root of `api/` = settings files tools read (`package.json`, `tsconfig.json`, `.env`, `prisma.config.ts`) · `src/` = code I write that the app runs · tool folders = owned by a tool (`prisma/`, `node_modules/`, `dist/`).
-- **Why `prisma/` is outside `src/`**: it's not app code — it's the database blueprint (in Prisma's own language) + migration history, read by the Prisma CLI. `prisma init` puts it there by convention.
-- **`schema.prisma`**: "schema" = the blueprint of the database (tables, columns, rules). `.prisma` = Prisma's own little language, not TypeScript.
-- **How to learn a structure without AI**: don't invent it — the tool's `init` command and its "Getting started" docs create the standard layout. Copy the convention, then ask "who reads this file?"
-- **Prisma model**: blueprint of one table (like one Excel sheet); each line = one column: `name  Type  @rules`.
-- **enum**: a fixed list of allowed values (a dropdown), e.g. `Role` = ADMIN / TEAM_LEAD / AGENT.
-- **Attributes (rules)**: `@id` = row's ID · `@default(x)` = auto-fill if empty (`uuid()`, `now()`, `true`) · `@unique` = no duplicates · `@map("x")` = column name in the DB · `@@map("users")` = table name (`@@` = whole table).
-- **camelCase vs snake_case**: TypeScript uses `passwordHash`, databases use `password_hash`; `@map` connects them.
-- **Migration**: a saved SQL file that changes the database structure, in order (like Git commits for the database). Committed to Git so any database can be rebuilt the same way.
-- **Migration ≠ backup**: a migration saves *structure* (tables, columns), not *data*. To fix a mistake, write a NEW migration. Data is restored from backups (Neon has these).
-- **Schema → SQL**: `String` → `TEXT`, `Boolean` → `BOOLEAN`, `@id` → `PRIMARY KEY`, `@unique` → `UNIQUE INDEX`, `@default(now())` → `DEFAULT CURRENT_TIMESTAMP`. No `?` on a field → `NOT NULL` (required).
-- **`_prisma_migrations` table**: Prisma's own diary in the database of which migrations already ran.
-- **`git add .` = this folder and below only**: run from `api/`, it misses root files like `LEARNING_NOTES.md`. Run it from the repo root (or use `git add -A`) to include everything.
-- **`npx` "Need to install …"**: means the tool isn't in this folder's `node_modules` → I'm in the wrong folder. Say no, check `pwd`.
-- **IDE selection is sent to the AI**: highlighting lines in VS Code shares them with the assistant. Never select lines in `.env`.
+### npm & packages
+
+- **npm (Node Package Manager)** — installs packages (code other people wrote) for Node.js. Don't upgrade major versions mid-step. nvm = Node Version Manager, not needed now.
+- **package.json fields** — `name` · `version` · `main` (starting file if imported) · `scripts` (nicknames for commands, `npm run <name>`) · `license` · `type` (`commonjs` = classic import style).
+- **Normal vs dev dependency** — normal = the running app needs it (cement, e.g. Express). Dev (`-D`) = only while writing code (scaffolding, e.g. TypeScript).
+- **node_modules/** — where npm puts installed packages. Huge, re-creatable with `npm install`, so Git ignores it.
+- **Version pinning** — `npm install prisma@7.10.1` installs that exact version instead of "latest".
+- **`npx` "Need to install …"** — the tool isn't in this folder's `node_modules` → wrong folder. Say no, check `pwd`.
+- **`npm audit` / `npm audit fix`** — checks packages for known security bugs / installs safe patches (never `--force` blindly).
+
+### TypeScript & Node
+
+- **TypeScript** — JavaScript + types (labels like "this is a number"). Catches mistakes before the code runs; translated into normal JavaScript.
+- **TypeScript (checker) vs Node (runner)** — red lines come from TypeScript; Node just runs it. TypeScript knows `process` only when `@types/node` is loaded for that file.
+- **`tsx` vs `tsc`** — tsx converts TS→JS in memory and runs it (dev, no type check); tsc saves JS to `dist/` (production).
+- **dist/** — where TypeScript puts translated `.js` files on build. Generated, never committed.
+- **Exact spelling in config files** — `compileOptions` instead of `compilerOptions` is silently ignored.
+- **Node.js vs browser** — `api/` runs in Node (terminal, `process.env`, prisma). Browser code (`web/`) never touches the DB or secrets — it calls the API over HTTP.
+- **Entry file + imports** — Node starts at one file (`server.ts`) and follows its `import` lines like a tree.
+- **`import { X } from "path"`** — `{ }` around the NAME, quotes around the PATH. `./` = same folder, `../` = one up, no dot = package in `node_modules`.
+- **`require(...)`** — the older way to write `import`.
+- **`.then(...)`** — "when the answer comes back, do this".
+- **`async` / `await`** — `await` = "wait here until the answer comes", same as `.then` but reads top-to-bottom. Only inside an `async` function.
+- **Variable vs text** — `password` (no quotes) = the value inside; `"password"` = the literal word.
+- **Reading a big error** — find 3 lines: WHERE (`→ 19 ...` in my file), WHAT (the message), CODE. Skip the `at ...` lines.
+
+### Express & app structure
+
+- **Express** — a library that lets the app receive requests (like `GET /health`) and send replies.
+- **Route** — one address the app answers, e.g. `GET /health`. Like one phone extension.
+- **req / res** — request = what the user sent; response = what we send back.
+- **Port** — a numbered "door" the server listens at (ours: 3000).
+- **Why `app.ts` and `server.ts` are split** — app.ts builds the app, server.ts starts it. Tests can import the app without starting a real server.
+- **Folder rule — feature first, then job** — `modules/cases/` holds routes (which URL), controller (read request/reply), service (business rules), schema (valid input). Files that change together live together.
+- **Folder rule — "who reads this file?"** — root of `api/` = settings tools read · `src/` = code the app runs · tool folders = owned by a tool (`prisma/`, `node_modules/`, `dist/`).
+- **Monorepo** — one Git repo holding both `api/` and `web/`. Render and Vercel each deploy one sub-folder.
+- **Why React + Vite, not Next.js** — a separate Express API keeps the backend clear and lets any client use it.
+- **File header comments** — every file starts with `WHAT:` / `WHY:` (+ `RUN:` for scripts).
+- **STEPS block** — 15 empty lines below the code, every file ends with `// ─── STEPS ───`: the file's job in numbered plain-English steps. Hints for "write it from memory".
+- **How to learn a structure without AI** — the tool's `init` command and "Getting started" docs create the standard layout. Copy the convention, then ask "who reads this file?"
+
+### .env & settings
+
+- **.env** — a private file of `KEY=value` lines for secrets and settings. Secrets never live in code or Git.
+- **process.env** — Node's box of settings (environment variables). `dotenv` fills it from `.env`.
+- **.env.example** — a safe copy with fake values, committed so others know what to set up.
+- **Same keys in `.env` and `.env.example`** — code asks for values by name; only the values differ.
+- **Fallbacks can hide bugs** — `process.env.PORT || 3000` kept working even when `.env` was broken. Test with a different value.
+
+### Neon & database connection
+
+- **Neon** — a free online PostgreSQL database. My laptop and (later) Render can both connect.
+- **Connection string** — one line with user, password, host, database name. It's a secret.
+- **Parts of a connection string** — `postgresql://USER:PASSWORD@HOST/DATABASE?options`.
+- **Direct vs pooled URL** — direct = talks to the database itself; pooled (`-pooler`) = a middleman shares a few connections (taxi stand). App uses pooled; migrations use direct.
+- **Database role password vs account password** — account password = *me* into the Neon website; role password (`neondb_owner`) = *my app* into the database.
+- **SSL / `sslmode=verify-full`** — SSL encrypts the app ↔ Neon connection; `verify-full` also checks Neon's certificate is real.
+
+### Prisma
+
+- **`prisma.config.ts`** — Prisma's settings card: schema location, migrations folder, which URL the CLI uses (`DIRECT_URL`).
+- **Why `prisma/` is outside `src/`** — it's the database blueprint + migration history, read by the Prisma CLI, not app code.
+- **`schema.prisma`** — the blueprint of the database. `.prisma` = Prisma's own little language.
+- **Prisma model** — blueprint of one table; each line = one column: `name  Type  @rules`.
+- **enum** — a fixed list of allowed values (a dropdown), e.g. `Role` = ADMIN / TEAM_LEAD / AGENT.
+- **Attributes** — `@id` = row's ID · `@default(x)` = auto-fill if empty · `@unique` = no duplicates · `@map("x")` = column name in DB · `@@map("users")` = table name (`@@` = whole table).
+- **camelCase vs snake_case** — TypeScript `passwordHash`, database `password_hash`; `@map` connects them.
+- **Migration** — a saved SQL file that changes the database structure, in order (Git commits for the database).
+- **Migration ≠ backup** — saves *structure*, not *data*. Fix mistakes with a NEW migration.
+- **Schema → SQL** — `String` → `TEXT`, `Boolean` → `BOOLEAN`, `@id` → `PRIMARY KEY`, `@unique` → `UNIQUE INDEX`, `@default(now())` → `DEFAULT CURRENT_TIMESTAMP`. No `?` → `NOT NULL`.
+- **`_prisma_migrations` table** — Prisma's diary of which migrations already ran.
+- **Prisma generate** — reads `schema.prisma` and writes TypeScript code (`PrismaClient`, types). Re-run after EVERY schema change.
+- **Driver adapter (`@prisma/adapter-pg`)** — Prisma 7's "translator" between Prisma and PostgreSQL, given the `connectionString`.
+- **Shared client (`db.ts`)** — create `prisma` once and export it, so the app uses one connection pool.
+- **`prisma.user.create({ data })`** — Prisma builds an SQL `INSERT` in memory, sends it to Neon; the DB fills defaults and returns the new row.
+- **`$disconnect()`** — closes the DB connection so the program can finish. In bash written `\$disconnect`.
+- **`P2002` / `Unique constraint failed on users_email_key`** — that email already exists (from `@unique`). Later (Step 6) → friendly `409 Conflict`.
+
+### Security & auth
+
+- **bcrypt — how password hashing works:**
+  - **Stored string:** `$2b$10$<salt: 22 chars><hash: 31 chars>`
+    - `2b` = version
+    - `10` = cost (2^10 = 1,024 rounds, slow on purpose)
+    - salt = random text stored openly (not secret)
+    - hash = result of salt + password
+  - **Sign up** `bcrypt.hash(pw, 10)` — make random salt → hash salt + password → store version + cost + salt + hash as one string.
+  - **Login** `bcrypt.compare(typed, user.passwordHash)` — read cost + salt from stored string → hash salt + typed password the same way → compare. Match ✅ / no match ❌.
+  - Never decrypts (one-way) — re-hashes and compares. Same password + different salt → different hash.
+  - Salt stops pre-made lookup tables; cost stops fast guessing.
+  - **Interview:** *"bcrypt adds a random salt and hashes slowly with a cost factor, storing version, cost, salt and hash in one string. On login, compare re-hashes the typed password with the stored salt and checks for a match."*
+- **JWT (JSON Web Token)** — `header.payload.signature`.
+  - **Header:** algorithm (`HS256`) + type (`JWT`). `jwt.sign` makes it automatically.
+  - **Payload:** `sub` (subject = user id), `role`, `iat` (issued at), `exp` (expires). Readable by ANYONE (encoded, not encrypted) → never put secrets in it.
+  - **Signature:** header + payload stamped with the server's secret. Edit the payload (e.g. AGENT → ADMIN) → signature no longer matches → rejected.
+  - **`jwt.sign(payload, secret, { expiresIn: "15m" })`:** options are NOT part of the token — the library turns `expiresIn` into `exp` in the payload and builds the header itself. `exp − iat = 900` s = 15 min.
+  - **Access token = visitor pass:** short-lived so a stolen one is useful only briefly. Refresh token (Step 4) keeps you logged in.
+  - **Interview:** *"After login I sign a JWT with the user id and role, valid 15 minutes. The client sends it with each request; the server checks the signature with its secret."*
+- **User enumeration** — "email not found" vs "wrong password" tells an attacker which emails exist. Fix: same message + same 401 for both.
+- **DoS (Denial of Service)** — an attack that slows down or crashes a server so real users can't use it.
+
+<br>
 
 ---
 
-## Commands I ran
-- `git init` — turns the current folder into a Git repository (creates the hidden `.git` folder).
-- `git status` — shows which files are new, changed, or ready to be committed.
-- `mkdir api` — makes a new folder called `api` (make directory).
-- `cd api` — moves the terminal into the `api` folder (change directory).
-- `npm init -y` — creates `package.json` with default answers (`-y` = yes to all).
-- `npm install -D typescript tsx @types/node` — installs TypeScript, a runner for `.ts` files, and Node's type labels as dev dependencies.
-- `pwd` — prints which folder the terminal is in (print working directory). Check it before `npm install`!
-- `npm install express` — installs Express (the web server) as a normal dependency.
-- `npm install -D @types/express` — installs Express's type labels as a dev dependency.
-- `npm run dev` — runs the `dev` script from package.json: `tsx watch src/server.ts` (starts the server, restarts on save).
-- `npm install dotenv` — installs dotenv, which loads `.env` into `process.env`.
-- `git add .` — puts all changed files (except ignored ones) into the staging area.
-- `git commit -m "message"` — saves a snapshot of the staged files with a message.
-- `git log --oneline` — shows the history of commits, one line each.
-- `npm install -D prisma@7.10.1` — installs the Prisma command tool (dev only), pinned to a stable version.
-- `npm install @prisma/client@7.10.1` — installs the code the app uses to talk to the database.
-- `npx prisma init` — creates `prisma/schema.prisma`, `prisma.config.ts` and `.gitignore`.
-- `npx prisma validate` — checks `schema.prisma` + `prisma.config.ts` for mistakes without touching the database.
-- `npx prisma migrate dev --name init` — compares schema with the database, writes a migration SQL file, and runs it on Neon.
-- `git push` — uploads my commits to GitHub.
-- `npx tsc --showConfig` — prints the TypeScript settings it actually understood (good for catching typos).
+## 8. Commands I ran
+
+### Terminal basics
+
+| Command | What it does |
+|---|---|
+| `pwd` | Prints which folder the terminal is in. Check it before `npm install`! |
+| `mkdir api` | Makes a new folder called `api`. |
+| `cd api` | Moves the terminal into the `api` folder. |
+
+### Git
+
+| Command | What it does |
+|---|---|
+| `git init` | Turns the current folder into a Git repository. |
+| `git status` | Shows which files are new, changed, or ready to commit. |
+| `git add .` | Puts all changed files (except ignored ones) into the staging area. |
+| `git commit -m "message"` | Saves a snapshot of the staged files with a message. |
+| `git log --oneline` | Shows the commit history, one line each. |
+| `git push` | Uploads my commits to GitHub. |
+| `git switch -c step-3-login` | Creates a new branch and moves onto it (uncommitted changes come along). |
+
+### npm
+
+| Command | What it does |
+|---|---|
+| `npm init -y` | Creates `package.json` with default answers. |
+| `npm install -D typescript tsx @types/node` | TypeScript, a `.ts` runner, and Node's type labels (dev). |
+| `npm install express` | Express (the web server). |
+| `npm install -D @types/express` | Express's type labels (dev). |
+| `npm install dotenv` | Loads `.env` into `process.env`. |
+| `npm install -D prisma@7.10.1` | The Prisma command tool (dev), pinned version. |
+| `npm install @prisma/client@7.10.1` | The code the app uses to talk to the database. |
+| `npm install @prisma/adapter-pg@7.10.1` | Prisma ↔ PostgreSQL translator (same version as Prisma). |
+| `npm install bcryptjs` | bcrypt in pure JavaScript (no build step on Windows). |
+| `npm install jsonwebtoken` + `npm install -D @types/jsonwebtoken` | JWT library + its type labels (dev). |
+| `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` | Makes a 64-character random secret. |
+| `npm audit` / `npm audit fix` | Lists / fixes known security problems. |
+| `npm run dev` | Runs `tsx watch src/server.ts` (starts server, restarts on save). |
+
+### Prisma
+
+| Command | What it does |
+|---|---|
+| `npx prisma init` | Creates `prisma/schema.prisma`, `prisma.config.ts`, `.gitignore`. |
+| `npx prisma validate` | Checks schema + config for mistakes without touching the database. |
+| `npx prisma migrate dev --name init` | Compares schema with DB, writes a migration SQL file, runs it on Neon. |
+| `npx prisma generate` | Builds the Prisma Client code into `src/generated/prisma`. |
+
+### Running & testing
+
+| Command | What it does |
+|---|---|
+| `npx tsc --showConfig` | Prints the TypeScript settings it actually understood. |
+| `npx tsx src/scripts/create-admin.ts` | Runs the admin script (from `api/`). |
+| `npx tsx -e "..."` | Runs a short piece of TypeScript from the terminal (used to test `db.ts`). |
+
+<br>
 
 ---
 
-## Interview questions
+## 9. Interview questions
+
 ### Step 1 — Setup
-1. **Why split `app.ts` and `server.ts`?**
-   app.ts builds the app; server.ts starts it on a port. Tests can import the app and send fake requests without starting a real server.
-2. **How do you keep secrets out of your code?**
-   Put them in a `.env` file, load them with dotenv into `process.env`, add `.env` to `.gitignore`, and commit only a `.env.example` with fake values. If a secret is ever committed, change (rotate) it.
-3. **What's the difference between `dependencies` and `devDependencies`?**
-   dependencies are needed while the app runs (Express, dotenv). devDependencies are only needed while coding (TypeScript, tsx, @types).
+
+**1. Why split `app.ts` and `server.ts`?**
+
+app.ts builds the app; server.ts starts it on a port. Tests can import the app and send fake requests without starting a real server.
+
+**2. How do you keep secrets out of your code?**
+
+Put them in a `.env` file, load them with dotenv into `process.env`, add `.env` to `.gitignore`, and commit only a `.env.example` with fake values. If a secret is ever committed, change (rotate) it.
+
+**3. What's the difference between `dependencies` and `devDependencies`?**
+
+dependencies are needed while the app runs (Express, dotenv). devDependencies are only needed while coding (TypeScript, tsx, @types).
 
 ### Step 2 — Prisma + Neon
-1. **What is an ORM and why use Prisma?**
-   ORM = Object-Relational Mapper: I write TypeScript (`prisma.user.create(...)`) and it writes the SQL. Prisma also gives typed results and manages migrations.
-2. **What is a migration and why commit it?**
-   A saved SQL file that changes the database structure. Committed to Git so every database (local, test, production) is built the same way, in order, and changes can be reviewed.
-3. **Why two database URLs?**
-   The app uses the pooled URL (a middleman shares connections, good for many requests). Migrations use the direct URL, because schema changes need one real, stable connection.
+
+**1. What is an ORM and why use Prisma?**
+
+ORM = Object-Relational Mapper: I write TypeScript (`prisma.user.create(...)`) and it writes the SQL. Prisma also gives typed results and manages migrations.
+
+**2. What is a migration and why commit it?**
+
+A saved SQL file that changes the database structure. Committed to Git so every database (local, test, production) is built the same way, in order, and changes can be reviewed.
+
+**3. Why two database URLs?**
+
+The app uses the pooled URL (a middleman shares connections, good for many requests). Migrations use the direct URL, because schema changes need one real, stable connection.
+
+<br>
 
 ---
 
-## Open questions / things I found confusing
-- **Behind schedule (2026-10-25)**: ~5 steps behind. DECISION: cut nothing — keep all modules, stretch items and revision steps; the deadline moves instead. Project quality > deadline.
-- Why `Notes/` didn't appear in `git status` — I thought it was because I added it before `git init`. (Answer: it's because `Notes/` is written inside `.gitignore`; the order doesn't matter.)
-- Is this project "impressive"? (Answer: interviewers judge how well I explain decisions — auth, transactions, permissions, SLA — and that it's deployed and tested. AI intake is now stretch item 3.)
-- Dev vs normal dependency was confusing at first — see the cement/scaffolding example above.
+## 10. Open questions / things I found confusing
+
+### 🅿️ Parked (come back later)
+
+- **Controller's role (2026-11-01)**
+  - I don't yet fully see how `controller.ts` works as a "middleman" or what it really adds (and how it helps stop the app crashing).
+  - What I know so far: Express calls `loginController(req, res)` for me (no `()` in routes = "call it later"); the controller pulls email/password out of `req.body`, calls the service, and turns the result into a 200 or 401 response.
+  - Revisit at Steps 8–9 (building users/customers modules) and Step 16 (tests calling services directly).
+
+- **npm "allow-scripts" warning (2026-10-26)**
+  - npm warned about install scripts for `@prisma/engines`, `esbuild`, `prisma`.
+  - `package.json` now has an `allowScripts` list approving these 3. Later: understand what `npm approve-scripts` does.
+
+### 📌 Ongoing
+
+- **Behind schedule (2026-10-25):** ~5 steps behind. DECISION: cut nothing — keep all modules, stretch items and revision steps; the deadline moves instead. Project quality > deadline.
+- **Writing code on my own (2026-10-31):** I can't yet. Plan: one "write it from memory" exercise per sub-step + 20–30 min/day syntax practice on Exercism (JavaScript track).
+
+### ✅ Answered
+
+- **Why `Notes/` didn't appear in `git status`** — not because I added it before `git init`; it's because `Notes/` is in `.gitignore`. Order doesn't matter.
+- **Is this project "impressive"?** — interviewers judge how well I explain decisions (auth, transactions, permissions, SLA) and that it's deployed and tested. AI intake is now stretch item 3.
+- **Dev vs normal dependency** — see the cement/scaffolding example in Concepts.
+- **The one-line test command (`npx tsx -e ...`)** — explained piece by piece on 2026-10-26.
+- **`import` syntax (Step 3.1)** — `{ }` goes around the *name*, the path goes in quotes, `./` vs `../` vs package name.
+- **Why imports are repeated in every file / why `async` / why `export`** — answered in chat during 3.4.

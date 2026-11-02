@@ -1,3 +1,6 @@
+# WHAT: files/folders Git must never save (inside api/).
+# WHY:  node_modules and generated code can be re-created; .env holds secrets.
+
 node_modules
 # Keep environment variables out of version control
 .env

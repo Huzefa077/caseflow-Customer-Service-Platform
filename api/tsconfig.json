@@ -1,3 +1,5 @@
+// WHAT: settings for TypeScript — where my code is (src), where compiled JS goes (dist), how strict to be.
+// WHY:  so TypeScript checks my code the same way every time.
 {
   "compilerOptions": {
     "target": "ES2022",
