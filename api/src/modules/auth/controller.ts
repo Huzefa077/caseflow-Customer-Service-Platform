@@ -16,6 +16,11 @@ export async function loginController( req: Request, res: Response){
     }
 }
 
+export function meController(req: Request, res: Response) {
+    res.json({ user: req.user });
+}
+
+
 
 
 

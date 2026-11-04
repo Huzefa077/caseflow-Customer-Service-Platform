@@ -1,12 +1,15 @@
 // WHAT: the "door" for auth — says which URL + method goes to which controller function.
 // WHY:  keeps all auth URLs in one place; app.ts plugs this whole group in under /auth.
 
-
+import { authenticate } from "../../middleware/authenticate";
 import { Router } from "express";
-import { loginController } from "./controller";
+import { loginController, meController } from "./controller";
 
 const router = Router();
 router.post("/login", loginController);
+
+router.get("/me", authenticate, meController);
+
 
 export default router;
 
