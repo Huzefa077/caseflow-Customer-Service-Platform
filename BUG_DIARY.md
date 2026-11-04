@@ -192,3 +192,31 @@ Deleted the admin row in Neon (Tables → users), re-ran `npx tsx src/scripts/cr
 - The database keeps the hash from the moment the user was created; changing config later changes nothing.
 - A real app needs a "reset password" action that re-hashes.
 - My `catch` hides the real reason — later (Step 6) errors get logged.
+
+<br>
+
+---
+
+## 8. `npm run dev` crashed: "Cannot find name 'req'" in `controller.ts`
+
+*2026-11-02 · Step 4.1*
+
+**Problem**
+
+Added `console.log("headers:", req.headers)` to see a real request → the server would not start.
+
+**Cause**
+
+- The 2 `console.log` lines were put at the **top of the file**, outside `loginController`.
+- `req` only exists **inside** the function — Express creates it fresh for each request and passes it in.
+- Top-of-file code runs once when the server starts, when there is no request yet → `req` is not defined.
+
+**Fix**
+
+Moved the 2 lines inside `loginController`, as its first lines.
+
+**Lesson**
+
+- A variable only exists inside the `{ }` where it was created ("scope").
+- `req` and `res` = one specific request/response, so they only live inside the handler function.
+- Red squiggles in a file that nothing imports yet (like `authenticate.ts`) don't stop the server — only files the app actually loads can crash it.

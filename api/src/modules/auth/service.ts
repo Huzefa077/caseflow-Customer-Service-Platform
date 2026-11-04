@@ -21,6 +21,7 @@ export async function login (email: string, password: string){
         throw new Error("JWT_ACCESS_SECRET is missing in .env");
     }
 
+    // header is added by default, we dont mention what header should be added.
     const accessToken = jwt.sign(
         { sub: user.id, role: user.role },
         secret,
