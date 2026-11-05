@@ -1,18 +1,23 @@
 // WHAT: the "receptionist" for auth folder — This file reads the HTTP request, calls the service, sends the response.
 // WHY:  keeps HTTP details (req, res, status codes) out of the login logic in service.ts.
 
-import { Request , Response } from "express";
+import { Request, Response } from "express";
 import { login } from "./service";
 
-export async function loginController( req: Request, res: Response){
+export async function loginController(req: Request, res: Response) {
 
-    const {email,password} = req.body;
+    const { email, password} = req.body;
 
-    try{
-        const { user, accessToken } = await login(email, password);
-        res.status(200).json({user, accessToken});  //users first login will give not only his data, but also a JWT token which will be later verfied by the server in every single URL navigations.
-    }catch(err){
-        res.status(401).json({message: "Invalid email or password"});
+    try {
+        const { user, accessToken, refreshToken } = await login(email, password);
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
+        res.status(200).json({ user, accessToken });  //users first login will give not only his data, but also a JWT token which will be later verfied by the server in every single URL navigations.
+    } catch (err) {
+        res.status(401).json({ message: "Invalid email or password" });
     }
 }
 

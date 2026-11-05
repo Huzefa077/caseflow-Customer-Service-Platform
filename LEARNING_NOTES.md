@@ -25,13 +25,14 @@
 |---|---|
 | **Week** | 1 |
 | **Step** | 4 — authenticate middleware + refresh token + logout |
-| **Sub-step** | 4.2 finished (table created in Neon) — next: commit 4.2, then 4.3 (login creates refresh token) |
+| **Sub-step** | 4.3 — login sets the httpOnly cookie (Postman shows it); next: check the new row in Neon, commit 4.3, then 4.4 `/auth/refresh` |
 | **Git branch** | `step-4-auth` (created; GitHub `step-3-login` deleted) |
 
 **Next thing to do:**
 
 - 4.1 committed + pushed to `step-4-auth` ✅ (PR comes at 4.6)
-- Commit 4.2 → then 4.3: login makes a random refresh token → hash it → save a row → send it as an httpOnly cookie
+- Check Neon → `refresh_tokens` has a new row whose `token_hash` ≠ the cookie value → commit 4.3
+- Then 4.4: `POST /auth/refresh` (needs `cookie-parser` to READ the cookie)
 
 **Step 4 plan (Core / Bonus):**
 
@@ -207,6 +208,11 @@
 
 - [x] 4.2 `RefreshToken` model (+ `@relation` to `User`) in `schema.prisma`; `npx prisma migrate dev --name refresh_token` → `20261104184147_refresh_token` created `refresh_tokens` (5 columns + foreign key to `users`) (2026-11-04)
 
+- [ ] 4.3 Login creates a refresh token
+  - [x] a) tested `crypto.randomBytes(32)` + SHA-256 hash in the terminal (random each time) (2026-11-05)
+  - [x] b) `createRefreshToken(userId)` in `service.ts`: random token → SHA-256 hash → 7-day `expiresAt` → saves a row → returns the REAL token; ran `npx prisma generate` so `prisma.refreshToken` exists (BUG_DIARY #10)
+  - [x] c) `login()` calls `createRefreshToken(user.id)` and returns it; `loginController` destructures it from the service result (NOT `req.body`) and sends `res.cookie("refreshToken", ..., { httpOnly: true, maxAge: 7 days })`; Postman Cookies tab shows it: HttpOnly true, expires in 7 days (2026-11-05)
+
 > **Note:** the project folder was moved and the old chat was lost. This file was rebuilt on 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed. Git was not started yet and there was no `api/` folder.
 
 <br>
@@ -255,6 +261,7 @@
 | `api/src/generated/prisma/` | Code made by `npx prisma generate` from the schema (`client.ts`, `enums.ts`, `models/User.ts`). Git-ignored, never edit. |
 | `api/src/scripts/create-admin.ts` | One-time script: reads admin email/password from `.env`, hashes the password, saves an ADMIN user. |
 | `api/src/modules/auth/routes.ts` | `POST /login` → `loginController`; `GET /me` → `authenticate` first, then reply "You are in!". |
+| `api/src/modules/auth/service.ts` (4.3) | `createRefreshToken(userId)`: random token → hash → save row → return the real token. |
 | `api/src/types/express.d.ts` | Types-only file: tells TypeScript that `Request` may have a `user` field. Copy-and-know-the-purpose file, no need to memorise. |
 | `api/src/middleware/authenticate.ts` | The "guard at the door": checks the token in the `Authorization` header; real → `next()`, missing/fake/expired → 401. |
 | `api/src/modules/auth/controller.ts` | Reads `req.body`, calls the service, sends 200 or 401. `meController` replies with `req.user`. |
@@ -331,6 +338,31 @@
 - **One-to-many** — one user, many refresh tokens (laptop + phone). `RefreshToken[]` (the `[]`) marks the "one" side.
 - **Prisma relation lines** — `user User @relation(fields: [userId], references: [id])`: the TYPE `User` says which model to link; `fields` = column here, `references` = column there. A model name as a type = link, NOT a column. Only `userId` is a real column; `user` and `refreshTokens` are code shortcuts. Proof: the migration SQL has 5 columns. (Neon's table view shows an extra "user" link column with no type — a viewer feature, not stored data.)
 - **Migration name** — `--name` is only a label for the folder; the table name comes from `@@map`.
+- **`prisma generate` vs `migrate dev`** — `migrate dev` changes the real database; `generate` rebuilds the Prisma Client (TypeScript code) from `schema.prisma`. Schema changed → run both. One client, one property per model (`model RefreshToken` → `prisma.refreshToken`). Reads `prisma.config.ts` (schema path) + the `generator` block's `output`. Interview line: *"Migrate updates the database, generate updates my code; the schema is the single source of truth."*
+- **SHA-256 vs bcrypt** — bcrypt is slow on purpose, for short guessable passwords. A refresh token is 64 random characters nobody can guess, so fast SHA-256 is enough. Same input → same hash, which lets us look the token up later.
+- **`crypto` (built into Node)** — `randomBytes(32).toString("hex")` makes the random token; `createHash("sha256").update(t).digest("hex")` makes the hash.
+- **Login request flow (in my own words, 2026-11-05)** — request hits `app.ts` → `app.use("/auth", authRoutes)` sends it to `routes.ts` → `routes.ts` picks `loginController` → controller reads `req.body` and calls `login()` in `service.ts` → service returns the result to the controller → the controller sends the answer with `res` and the flow ENDS there (the response never goes back through routes). `routes.ts` only decides where a request goes.
+- **Why the cookie holds the TOKEN but Neon holds the HASH (my most confusing topic, 2026-11-05)**
+  - The server creates a token only at LOGIN. Later it creates nothing: it just hashes what the browser sends and compares.
+  - **At login (once):**
+    ```
+    server makes:  token = "AAA"
+    server saves:  hash("AAA") = "X9"   -> Neon
+    server sends:  "AAA"                -> cookie
+    ```
+  - **Later, the real user comes back:**
+    ```
+    browser sends:        "AAA"  (from the cookie)
+    server hashes it:     hash("AAA") = "X9"
+    server looks in Neon: "X9" exists -> allowed
+    ```
+  - **A thief who stole the Neon table** only has "X9". If they send "X9" as the token, the server hashes it: `hash("X9") = "Q4"` -> not in Neon -> refused. To get "X9" out of the server's hashing they would need "AAA", and a hash can't be reversed.
+  - Same idea as passwords: Neon keeps the hash, never the secret itself.
+  - **Interview line:** *"I store only a hash of the refresh token. On refresh I hash the token from the cookie and look that hash up, so a leaked database can't be used to get new access tokens."*
+- **Cookie** — a small named value the server asks the browser to store (`Set-Cookie` header from `res.cookie(...)`). The browser then sends it back automatically on every later request to that site, with no JavaScript needed. `httpOnly: true` = page JavaScript cannot read it (blocks token theft through injected scripts); `maxAge` = how long the browser keeps it; `secure: true` (production, HTTPS only) = only sent over HTTPS.
+- **Where each token lives** — access token: JSON response → kept in memory by the frontend → sent in the `Authorization` header. Refresh token: cookie only → never in the JSON, never readable by JavaScript.
+- **Controller question** — for each variable ask: did the client send it (`req.body`) or did the service give it (result of `login()`)?
+- **`tsc --noEmit` vs `tsx`** — `tsc --noEmit` only CHECKS types (no files written); `tsx` RUNS TypeScript directly without type-checking. `npm run dev` = `tsx watch`.
 - **Middleware** — a function `(req, res, next)` that runs BEFORE the route. Calls `next()` = "go on", or sends a reply = "stop here". "Guard at the door."
 - **Route with middleware** — `router.get("/me", authenticate, handler)` runs left to right: guard first, reply only if the guard lets you in.
 - **Port** — a numbered "door" the server listens at (ours: 3000).

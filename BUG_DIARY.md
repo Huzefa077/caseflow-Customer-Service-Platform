@@ -220,3 +220,58 @@ Moved the 2 lines inside `loginController`, as its first lines.
 - A variable only exists inside the `{ }` where it was created ("scope").
 - `req` and `res` = one specific request/response, so they only live inside the handler function.
 - Red squiggles in a file that nothing imports yet (like `authenticate.ts`) don't stop the server — only files the app actually loads can crash it.
+
+<br>
+
+---
+
+## 9. `npx tsx` said "Need to install tsx" (wrong folder again)
+
+*2026-11-05 · Step 4.3*
+
+**Problem**
+
+Ran `npx tsx -e "..."` and npx asked "Need to install the following packages: tsx. Ok to proceed?"
+
+**Cause**
+
+- The terminal was in the project root (`CaseFlow/`), not inside `api/`.
+- `tsx` is installed only in `api/node_modules`, so npx from the root can't find it and offers to download a temporary copy.
+
+**Fix**
+
+`Ctrl + C`, `cd api`, `pwd` (must end in `\api`), ran the same command again → printed `token:` and `hash :` with no question.
+
+**Lesson**
+
+- "Need to install..." from npx = STOP, I'm in the wrong folder.
+- `pwd` before every `npx` / `npm` command.
+- Answering `y` only downloaded a temporary copy to npx's cache; nothing was added to the project.
+
+<br>
+
+---
+
+## 10. `prisma.refreshToken` "does not exist" after the migration
+
+*2026-11-05 · Step 4.3*
+
+**Problem**
+
+After `migrate dev` created `refresh_tokens` in Neon, `prisma.refreshToken.create(...)` was red: "Property 'refreshToken' does not exist".
+
+**Cause**
+
+- `migrate dev` changed the real database, but did NOT rebuild the Prisma Client (the generated TypeScript code).
+- `src/generated/prisma/models/` still had only `User.ts`, so the client didn't know about the new model.
+- (I had wrongly said `migrate dev` might run `generate` by itself.)
+
+**Fix**
+
+`npx prisma generate` from `api/` → `models/RefreshToken.ts` appeared → `npx tsc --noEmit` printed nothing.
+
+**Lesson**
+
+- Schema changed → run BOTH: `migrate dev` (updates the database) and `generate` (updates my code).
+- `prisma.refreshToken` is not written anywhere by me: Prisma makes it from the model name `RefreshToken` (first letter lowercased). `@@map` only names the table in Neon.
+- There is ONE client; `generate` adds one property per model.
