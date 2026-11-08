@@ -53,12 +53,6 @@ export async function login(email: string, password: string) {
 
 
 
-
-
-
-
-
-
 // ─── STEPS (what this file does, in plain words) ───
 // login(email, password)
 //   1. find the user by email

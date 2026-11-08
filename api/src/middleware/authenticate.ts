@@ -9,9 +9,20 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     }
 
     const token = header.split(" ")[1];
-    try {
-        const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as { sub: string; role: string }; // 'as sub' part was added to make payload.sub and payload.role accessible in the very next line below. Its helping typeScript to understand what we are dealing with here
 
+    try {
+        const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as { sub: string; role: string }; 
+        // 'as sub' which is the user id part was added to make payload.sub and 
+        // payload.role accessible in the very next line below. 
+        // Its helping typeScript to understand what we are 
+        // dealing with here
+
+        //we are trying to find the true user id and role of the user 
+        // because we cannot trust what the front end or post man is 
+        // claiming about its role and user id, we we assign 
+        // user data to its request from the token it was given 
+        // by the server when user tried to login the first 
+        // time where server provided jwt token to the frontend/user
         req.user = { id: payload.sub, role: payload.role };
         next();
     } catch {

@@ -25,14 +25,17 @@
 |---|---|
 | **Week** | 1 |
 | **Step** | 4 — authenticate middleware + refresh token + logout |
-| **Sub-step** | 4.3 — login sets the httpOnly cookie (Postman shows it); next: check the new row in Neon, commit 4.3, then 4.4 `/auth/refresh` |
+| **Sub-step** | 4.4 `POST /auth/refresh` — piece 1 of 3 (cookie-parser) almost done |
 | **Git branch** | `step-4-auth` (created; GitHub `step-3-login` deleted) |
 
 **Next thing to do:**
 
 - 4.1 committed + pushed to `step-4-auth` ✅ (PR comes at 4.6)
-- Check Neon → `refresh_tokens` has a new row whose `token_hash` ≠ the cookie value → commit 4.3
-- Then 4.4: `POST /auth/refresh` (needs `cookie-parser` to READ the cookie)
+- **First, 1 fix in `api/src/app.ts`:** move `app.use(cookieParser())` UP, directly under `app.use(express.json());` (it must come BEFORE `app.use("/auth", authRoutes)`, because Express runs middleware top to bottom). Then `npx tsc --noEmit` (from `api/`) → no output. Then commit.
+- **4.4 piece 2 (service):** `refresh(token)` in `service.ts`: hash the token → find the row in `refresh_tokens` → refuse if not found, `expiresAt` passed, or `revokedAt` set → make a new access token (reuse the same `jwt.sign` as login).
+- **4.4 piece 3 (controller + route):** `refreshController` reads `req.cookies.refreshToken` → calls `refresh()` → `200 { accessToken }` or `401`; route `router.post("/refresh", refreshController)`. Postman: login first (cookie is saved), then `POST /auth/refresh` with no body → new accessToken.
+- Then 4.5 logout, 4.6 full Postman test + PR → Step 4 done.
+- **When I come back:** read "Why the cookie holds the TOKEN but Neon holds the HASH" in Concepts, then do the Reproduce step: write the login flow + the refresh flow in my own words.
 
 **Step 4 plan (Core / Bonus):**
 
@@ -208,7 +211,7 @@
 
 - [x] 4.2 `RefreshToken` model (+ `@relation` to `User`) in `schema.prisma`; `npx prisma migrate dev --name refresh_token` → `20261104184147_refresh_token` created `refresh_tokens` (5 columns + foreign key to `users`) (2026-11-04)
 
-- [ ] 4.3 Login creates a refresh token
+- [x] 4.3 Login creates a refresh token (commit `382ad10`, pushed)
   - [x] a) tested `crypto.randomBytes(32)` + SHA-256 hash in the terminal (random each time) (2026-11-05)
   - [x] b) `createRefreshToken(userId)` in `service.ts`: random token → SHA-256 hash → 7-day `expiresAt` → saves a row → returns the REAL token; ran `npx prisma generate` so `prisma.refreshToken` exists (BUG_DIARY #10)
   - [x] c) `login()` calls `createRefreshToken(user.id)` and returns it; `loginController` destructures it from the service result (NOT `req.body`) and sends `res.cookie("refreshToken", ..., { httpOnly: true, maxAge: 7 days })`; Postman Cookies tab shows it: HttpOnly true, expires in 7 days (2026-11-05)
@@ -360,9 +363,15 @@
   - Same idea as passwords: Neon keeps the hash, never the secret itself.
   - **Interview line:** *"I store only a hash of the refresh token. On refresh I hash the token from the cookie and look that hash up, so a leaked database can't be used to get new access tokens."*
 - **Cookie** — a small named value the server asks the browser to store (`Set-Cookie` header from `res.cookie(...)`). The browser then sends it back automatically on every later request to that site, with no JavaScript needed. `httpOnly: true` = page JavaScript cannot read it (blocks token theft through injected scripts); `maxAge` = how long the browser keeps it; `secure: true` (production, HTTPS only) = only sent over HTTPS.
+- **Reading cookies needs `cookie-parser` (my words, checked 2026-11-05)**
+  - Express can SET a cookie with `res.cookie(...)`, but it does not READ cookies by default: `req.cookies` (with an s) doesn't exist.
+  - The browser still sends the cookie in the `Cookie` header on every request; Express just doesn't unpack it.
+  - The middleware `cookie-parser` unpacks that header into `req.cookies`. Install: `npm install cookie-parser` and `npm install -D @types/cookie-parser` (type labels, dev-only). In `app.ts`: `import cookieParser from "cookie-parser"` and `app.use(cookieParser())` under `express.json()`.
+  - Why we need it: the frontend sends the refresh token cookie, the backend reads `req.cookies.refreshToken`, hashes it, and compares with the hash saved in Neon.
 - **Where each token lives** — access token: JSON response → kept in memory by the frontend → sent in the `Authorization` header. Refresh token: cookie only → never in the JSON, never readable by JavaScript.
 - **Controller question** — for each variable ask: did the client send it (`req.body`) or did the service give it (result of `login()`)?
 - **`tsc --noEmit` vs `tsx`** — `tsc --noEmit` only CHECKS types (no files written); `tsx` RUNS TypeScript directly without type-checking. `npm run dev` = `tsx watch`.
+- **Why `req.user` is set by the backend (2026-11-08)** — the frontend knows its own role, but the server can't believe the client: anyone can type `"role": "ADMIN"` into Postman. The token payload was written by the server and signed with the secret; if the payload is edited, `jwt.verify` fails. So after verify passes, the payload is the only trusted info about the user. `req.user = { id: payload.sub, role: payload.role }` copies that verified data so later code (`authorize`, cases, audit log) reads it. It is NOT sent by the frontend. **Rule: never trust what the client says about itself; trust only the verified token or the database.** Interview line: *"The server derives identity and role from the signed JWT, never from the request body."*
 - **Middleware** — a function `(req, res, next)` that runs BEFORE the route. Calls `next()` = "go on", or sends a reply = "stop here". "Guard at the door."
 - **Route with middleware** — `router.get("/me", authenticate, handler)` runs left to right: guard first, reply only if the guard lets you in.
 - **Port** — a numbered "door" the server listens at (ours: 3000).
