@@ -2,11 +2,11 @@
 // WHY:  keeps HTTP details (req, res, status codes) out of the login logic in service.ts.
 
 import { Request, Response } from "express";
-import { login } from "./service";
+import { login, refresh } from "./service";
 
 export async function loginController(req: Request, res: Response) {
 
-    const { email, password} = req.body;
+    const { email, password } = req.body;
 
     try {
         const { user, accessToken, refreshToken } = await login(email, password);
@@ -18,6 +18,19 @@ export async function loginController(req: Request, res: Response) {
         res.status(200).json({ user, accessToken });  //users first login will give not only his data, but also a JWT token which will be later verfied by the server in every single URL navigations.
     } catch (err) {
         res.status(401).json({ message: "Invalid email or password" });
+    }
+}
+
+export async function refreshController(req: Request, res: Response) {
+    const token = req.cookies.refreshToken;
+     if (!token) {
+        return res.status(401).json({ message: "No refresh token, please login" });
+    }
+    try {
+        const { accessToken } = await refresh(token);
+        res.status(200).json({ accessToken });
+    } catch(err){
+        res.status(401).json({message: "Auto id verification failed, Please login again"});
     }
 }
 

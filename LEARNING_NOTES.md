@@ -25,15 +25,14 @@
 |---|---|
 | **Week** | 1 |
 | **Step** | 4 — authenticate middleware + refresh token + logout |
-| **Sub-step** | 4.4 `POST /auth/refresh` — piece 1 of 3 (cookie-parser) almost done |
+| **Sub-step** | 4.4 finished (Postman: refresh returns a new accessToken) — next: commit 4.4, then 4.5 `POST /auth/logout` |
 | **Git branch** | `step-4-auth` (created; GitHub `step-3-login` deleted) |
 
 **Next thing to do:**
 
 - 4.1 committed + pushed to `step-4-auth` ✅ (PR comes at 4.6)
-- **First, 1 fix in `api/src/app.ts`:** move `app.use(cookieParser())` UP, directly under `app.use(express.json());` (it must come BEFORE `app.use("/auth", authRoutes)`, because Express runs middleware top to bottom). Then `npx tsc --noEmit` (from `api/`) → no output. Then commit.
-- **4.4 piece 2 (service):** `refresh(token)` in `service.ts`: hash the token → find the row in `refresh_tokens` → refuse if not found, `expiresAt` passed, or `revokedAt` set → make a new access token (reuse the same `jwt.sign` as login).
-- **4.4 piece 3 (controller + route):** `refreshController` reads `req.cookies.refreshToken` → calls `refresh()` → `200 { accessToken }` or `401`; route `router.post("/refresh", refreshController)`. Postman: login first (cookie is saved), then `POST /auth/refresh` with no body → new accessToken.
+- Commit 4.4 (from the `CaseFlow/` root)
+- **4.5 `POST /auth/logout`:** read the cookie → hash it → set `revokedAt = new Date()` on that row → `res.clearCookie("refreshToken")` → 200. Then prove it: `/auth/refresh` after logout must give 401.
 - Then 4.5 logout, 4.6 full Postman test + PR → Step 4 done.
 - **When I come back:** read "Why the cookie holds the TOKEN but Neon holds the HASH" in Concepts, then do the Reproduce step: write the login flow + the refresh flow in my own words.
 
@@ -372,6 +371,16 @@
 - **Controller question** — for each variable ask: did the client send it (`req.body`) or did the service give it (result of `login()`)?
 - **`tsc --noEmit` vs `tsx`** — `tsc --noEmit` only CHECKS types (no files written); `tsx` RUNS TypeScript directly without type-checking. `npm run dev` = `tsx watch`.
 - **Why `req.user` is set by the backend (2026-11-08)** — the frontend knows its own role, but the server can't believe the client: anyone can type `"role": "ADMIN"` into Postman. The token payload was written by the server and signed with the secret; if the payload is edited, `jwt.verify` fails. So after verify passes, the payload is the only trusted info about the user. `req.user = { id: payload.sub, role: payload.role }` copies that verified data so later code (`authorize`, cases, audit log) reads it. It is NOT sent by the frontend. **Rule: never trust what the client says about itself; trust only the verified token or the database.** Interview line: *"The server derives identity and role from the signed JWT, never from the request body."*
+- **`refresh(token)` in `service.ts` (2026-11-09)** — hash the cookie token → `findFirst({ where: { tokenHash }, include: { user: true } })` → refuse if no row, `revokedAt` set, `expiresAt` passed, or user deactivated → `jwt.sign({ sub: row.user.id, role: row.user.role }, secret, { expiresIn: "15m" })`. `include: { user: true }` attaches the connected user (the relation) to the row, so the id/role are `row.user.id` / `row.user.role` (there is no variable called `user` in this function).
+- **JWT payload names** — the payload is an object of `name: value` pairs; names are how `authenticate.ts` finds values (`payload.sub`, `payload.role`). `sub` ("subject") is the standard name for "who the token is about"; both ends must use the same name. Keep the payload small: it is readable by anyone, so only what's needed on every request and rarely changes (id, role).
+- **`as { sub: string; role: string }`** — only a TypeScript label (erased at runtime). `jwt.verify` returns a vague type, so without it `payload.role` is red and `tsc` fails. It doesn't check the token.
+- **`payload` is local, `req` is shared** — `payload` disappears when `authenticate` ends; `req` is passed along the chain, so we copy the data to `req.user`.
+- **TypeScript narrowing** — `const secret = process.env.X` is `string | undefined`; after `if (!secret) throw ...` TypeScript knows it is a string.
+- **jwt.io** — free website where you paste a JWT to read its header/payload; shows the payload isn't secret.
+- **Why `/auth/refresh` has NO `authenticate` guard** — it is called because the access token has EXPIRED; a guard would refuse it. Its proof is the refresh token cookie, checked against Neon by `refresh()`. Request chain: `app.ts` → `routes.ts` → `refreshController` → `refresh()`.
+- **Who calls refresh automatically?** — the browser/frontend (an Axios interceptor in `web/src/api`, Step 18), not the backend: the backend only answers requests. For now I call it by hand in Postman.
+- **`await` + `try/catch` in a controller** — `refresh()` is async (returns a promise = "result is coming"), so `await` it; it throws on a bad token, so `try/catch` turns that into a clean 401.
+- **Postman: Body = none for no-body requests** — an empty/commented raw JSON body still sends `Content-Type: application/json`, and `express.json()` fails with `Unexpected end of JSON input` (BUG_DIARY #11).
 - **Middleware** — a function `(req, res, next)` that runs BEFORE the route. Calls `next()` = "go on", or sends a reply = "stop here". "Guard at the door."
 - **Route with middleware** — `router.get("/me", authenticate, handler)` runs left to right: guard first, reply only if the guard lets you in.
 - **Port** — a numbered "door" the server listens at (ours: 3000).

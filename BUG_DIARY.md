@@ -275,3 +275,32 @@ After `migrate dev` created `refresh_tokens` in Neon, `prisma.refreshToken.creat
 - Schema changed → run BOTH: `migrate dev` (updates the database) and `generate` (updates my code).
 - `prisma.refreshToken` is not written anywhere by me: Prisma makes it from the model name `RefreshToken` (first letter lowercased). `@@map` only names the table in Neon.
 - There is ONE client; `generate` adds one property per model.
+
+<br>
+
+---
+
+## 11. `POST /auth/refresh` → `400 SyntaxError: Unexpected end of JSON input`
+
+*2026-11-09 · Step 4.4*
+
+**Problem**
+
+Postman returned `400 Bad Request` with an HTML error page: `SyntaxError: Unexpected end of JSON input` (stack inside `body-parser`).
+
+**Cause**
+
+- The request Body was set to `raw` + `JSON`, but every line was commented out (`// { ...`), so the body was effectively EMPTY.
+- Postman still sent the header `Content-Type: application/json`.
+- `express.json()` saw that header, tried to parse the empty text as JSON, and failed before the request even reached my route.
+- My code was fine.
+
+**Fix**
+
+Postman → Body tab → choose **none**. Then no JSON header + no body → `express.json()` skips it → the controller runs.
+
+**Lesson**
+
+- `express.json()` runs first on every request that says it is JSON, so a bad/empty JSON body fails before my routes.
+- A request that needs no body (like refresh, which uses only the cookie) must have Body = none in Postman.
+- This error page also shows my local file paths; the central error handler (Step 6) will hide such details.
