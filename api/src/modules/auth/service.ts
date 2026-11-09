@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "../../config/db";
 
+//_____________________________________________________________________
+
 //this function is used inside this file only. Inside login function.
 export async function createRefreshToken(userId: string) {
     const token = crypto.randomBytes(32).toString("hex");
@@ -18,6 +20,36 @@ export async function createRefreshToken(userId: string) {
 
     return token;
 }
+//_____________________________________________________________________
+
+export async function refresh(token: string) {
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const row = await prisma.refreshToken.findFirst({
+        where: { tokenHash },
+        include: { user: true },
+    });
+
+    //part 1 : throw new error
+    if (!row || row.revokedAt || row.expiresAt < new Date() || !row.user.isActive) {
+        throw new Error("Invalid refresh token");
+    }
+    
+
+    //Generate new Access Token
+    const secret = process.env.JWT_ACCESS_SECRET;
+    
+    if (!secret) {
+    throw new Error("JWT_ACCESS_SECRET is missing in .env");
+}
+    const accessToken = jwt.sign(
+        { sub: row.user.id, role: row.user.role },
+        secret,
+        { expiresIn: "15m" }
+    );
+    return {accessToken};
+}
+
+//_____________________________________________________________________
 
 export async function login(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email } });
@@ -50,7 +82,7 @@ export async function login(email: string, password: string) {
         refreshToken,
     };
 }
-
+//_____________________________________________________________________
 
 
 // ─── STEPS (what this file does, in plain words) ───

@@ -32,9 +32,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
 }
 
 
-
-
-
 // Purpose: is the person logged in?
 // - No "Bearer <token>" header → 401.
 // - jwt.verify checks the token's SIGNATURE using JWT_ACCESS_SECRET

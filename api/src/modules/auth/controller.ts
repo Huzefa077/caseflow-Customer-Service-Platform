@@ -25,10 +25,6 @@ export function meController(req: Request, res: Response) {
     res.json({ user: req.user });
 }
 
-
-
-
-
 //----STEPS (WHAT THIS FILE DOES)------
 //  1.  take email + password out of the request body
 //  2.  try: ask the service to log in
