@@ -3,12 +3,12 @@
 
 import { authenticate } from "../../middleware/authenticate";
 import { Router } from "express";
-import { loginController, meController, refreshController } from "./controller";
+import { loginController, meController, refreshController, logoutController } from "./controller";
 
 const router = Router();
 router.post("/login", loginController);
 router.post("/refresh", refreshController);
-
+router.post("/logout", logoutController);
 router.get("/me", authenticate, meController);
 
 

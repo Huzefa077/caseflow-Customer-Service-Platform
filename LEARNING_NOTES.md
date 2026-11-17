@@ -25,26 +25,27 @@
 |---|---|
 | **Week** | 1 |
 | **Step** | 4 — authenticate middleware + refresh token + logout |
-| **Sub-step** | 4.4 finished (Postman: refresh returns a new accessToken) — next: commit 4.4, then 4.5 `POST /auth/logout` |
+| **Sub-step** | 4.5 logout finished (Postman: login → logout 200 → refresh 401) — next: commit 4.5, then 4.6 full test + PR |
 | **Git branch** | `step-4-auth` (created; GitHub `step-3-login` deleted) |
 
 **Next thing to do:**
 
-- 4.1 committed + pushed to `step-4-auth` ✅ (PR comes at 4.6)
-- Commit 4.4 (from the `CaseFlow/` root)
-- **4.5 `POST /auth/logout`:** read the cookie → hash it → set `revokedAt = new Date()` on that row → `res.clearCookie("refreshToken")` → 200. Then prove it: `/auth/refresh` after logout must give 401.
-- Then 4.5 logout, 4.6 full Postman test + PR → Step 4 done.
-- **When I come back:** read "Why the cookie holds the TOKEN but Neon holds the HASH" in Concepts, then do the Reproduce step: write the login flow + the refresh flow in my own words.
+- 4.1–4.4 committed + pushed to `step-4-auth` ✅ (last commit `d79e9f8`; PR comes at 4.6)
+- ✅ `tokenHash` is now `@unique` (migration `20261116113335_token_hash_unique` applied, `prisma generate` run, `tsc` clean). Not committed yet.
+- **Do NOT upgrade Prisma** when it shows 'Update available 7.10.1 -> 8.0.0-rc.33': it is a release candidate (my own recipe: never install `rc`).
+- Commit 4.5 (from the `CaseFlow/` root): `git add .` → commit `Step 4.5: logout + unique token hash` → push
+- Then 4.6: full Postman flow → commit → PR → merge → Step 4 done.
+- **Reproduce step (still to do):** write the refresh flow in my own words (service + controller), no peeking.
 
 **Step 4 plan (Core / Bonus):**
 
 | Sub-step | Time box | Part | Status |
 |---|---|---|---|
 | 4.1 `authenticate` middleware + `GET /auth/me` | 1.5 h | 🟢 Core | ⏳ part a ✅ (guard works, 3 Postman tests pass) · part b `req.user` ✅ · part c `/me` replies with `req.user` ✅ → **4.1 done** |
-| 4.2 `RefreshToken` model + migration | 1 h | 🟢 Core | ⬜ |
-| 4.3 Login creates refresh token (hash → DB → httpOnly cookie) | 1 h | 🔵 Bonus | ⬜ |
-| 4.4 `POST /auth/refresh` → new access token | 45 min | 🔵 Bonus | ⬜ |
-| 4.5 `POST /auth/logout` → revoke + clear cookie | 30 min | 🔵 Bonus | ⬜ |
+| 4.2 `RefreshToken` model + migration | 1 h | 🟢 Core | ✅ |
+| 4.3 Login creates refresh token (hash → DB → httpOnly cookie) | 1 h | 🔵 Bonus | ✅ |
+| 4.4 `POST /auth/refresh` → new access token | 45 min | 🔵 Bonus | ✅ |
+| 4.5 `POST /auth/logout` → revoke + clear cookie | 30 min | 🔵 Bonus | ✅ |
 | 4.6 Postman full flow → commit → PR → merge | 45 min | 🔵 Bonus | ⬜ |
 
 > Core done = a good day. Bonus = a great day. 15 min break after every block.
@@ -381,6 +382,10 @@
 - **Who calls refresh automatically?** — the browser/frontend (an Axios interceptor in `web/src/api`, Step 18), not the backend: the backend only answers requests. For now I call it by hand in Postman.
 - **`await` + `try/catch` in a controller** — `refresh()` is async (returns a promise = "result is coming"), so `await` it; it throws on a bad token, so `try/catch` turns that into a clean 401.
 - **Postman: Body = none for no-body requests** — an empty/commented raw JSON body still sends `Content-Type: application/json`, and `express.json()` fails with `Unexpected end of JSON input` (BUG_DIARY #11).
+- **`@unique` + index (2026-11-16)** — `@unique` on `tokenHash` makes the database keep a sorted lookup list (an index): finding a hash is fast instead of reading every row, and two rows can never share a hash. Needs BOTH `migrate dev` and `generate`. Prisma warned that existing duplicates would make it fail; safe here because tokens are random. SQL: `CREATE UNIQUE INDEX refresh_tokens_token_hash_key`.
+- **One row per login/device** — PC and phone logins make 2 separate rows (different random tokens/hashes), both valid; logout on one revokes only its row (`updateMany` where `tokenHash` + `revokedAt: null`). Log out everywhere would use `where: { userId }`.
+- **Logout: backend half + frontend half (2026-11-17)** — backend: `logout(token)` sets `revokedAt` on the row, `res.clearCookie("refreshToken")` deletes the cookie, always replies 200. Frontend (Step 18): throws away the access token from memory. The server can't delete an access token (stateless, nothing saved). A COPIED access token keeps working until its 15 min end, but it can't be renewed (refresh gives 401). A blocklist would make it instant but costs a DB lookup on every request, so apps accept the short window.
+- **Route paths start with `/`** — `"/logout"`, never `"./logout"` (BUG_DIARY #12).
 - **Middleware** — a function `(req, res, next)` that runs BEFORE the route. Calls `next()` = "go on", or sends a reply = "stop here". "Guard at the door."
 - **Route with middleware** — `router.get("/me", authenticate, handler)` runs left to right: guard first, reply only if the guard lets you in.
 - **Port** — a numbered "door" the server listens at (ours: 3000).

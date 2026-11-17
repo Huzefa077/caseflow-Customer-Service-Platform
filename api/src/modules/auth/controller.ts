@@ -2,7 +2,16 @@
 // WHY:  keeps HTTP details (req, res, status codes) out of the login logic in service.ts.
 
 import { Request, Response } from "express";
-import { login, refresh } from "./service";
+import { login, refresh, logout } from "./service";
+
+
+//________________________________________________________________________________________
+
+
+// LOGIN: POST /auth/login
+// takes email + password from the body, asks the service to check them,
+// puts the refresh token in an httpOnly cookie, and sends back the user + access token.
+// wrong email/password -> 401.
 
 export async function loginController(req: Request, res: Response) {
 
@@ -20,6 +29,13 @@ export async function loginController(req: Request, res: Response) {
         res.status(401).json({ message: "Invalid email or password" });
     }
 }
+//___________________________________________________________________________________________________________________
+
+
+
+// REFRESH: POST /auth/refresh
+// reads the refresh token from the cookie and asks the service for a NEW access token.
+// no cookie, or the token is fake / expired / revoked -> 401.
 
 export async function refreshController(req: Request, res: Response) {
     const token = req.cookies.refreshToken;
@@ -33,10 +49,34 @@ export async function refreshController(req: Request, res: Response) {
         res.status(401).json({message: "Auto id verification failed, Please login again"});
     }
 }
+//_____________________________________________________________________________________________________________
+
+// ME: GET /auth/me  (protected by the authenticate middleware)
+// replies with req.user = the id + role that authenticate took from the access token.
 
 export function meController(req: Request, res: Response) {
     res.json({ user: req.user });
 }
+//_____________________________________________________________________________________________________________
+
+
+// LOGOUT: POST /auth/logout
+// reads the refresh token from the cookie, asks the service to revoke it (revokedAt = now),
+// deletes the cookie from the browser, and always replies 200.
+
+export async function logoutController(req: Request, res: Response){
+    const token = req.cookies.refreshToken;
+
+    if(token){
+        await logout(token);
+    }
+
+    res.clearCookie("refreshToken");
+    res.status(200).json({message: "Logged out"});
+}
+//_____________________________________________________________________________________________________________
+
+
 
 //----STEPS (WHAT THIS FILE DOES)------
 //  1.  take email + password out of the request body

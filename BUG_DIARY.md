@@ -304,3 +304,56 @@ Postman → Body tab → choose **none**. Then no JSON header + no body → `exp
 - `express.json()` runs first on every request that says it is JSON, so a bad/empty JSON body fails before my routes.
 - A request that needs no body (like refresh, which uses only the cookie) must have Body = none in Postman.
 - This error page also shows my local file paths; the central error handler (Step 6) will hide such details.
+
+<br>
+
+---
+
+## 12. `POST /auth/logout` did nothing (route path typo `"./logout"`)
+
+*2026-11-17 · Step 4.5*
+
+**Problem**
+
+Postman `POST /auth/logout` did not work, although `tsc` showed no errors.
+
+**Cause**
+
+- In `routes.ts` the path was written `"./logout"` (stray dot) instead of `"/logout"`.
+- Express treats the path as plain text, so it registered a URL that starts with `./` which no request matches → `404 Cannot POST /auth/logout`.
+- TypeScript can't catch it: a path is just a string.
+
+**Fix**
+
+`router.post("/logout", logoutController);` → saved → Postman: `200 { "message": "Logged out" }`.
+
+**Lesson**
+
+- Route paths start with `/`, no dot. (`./` and `../` are for FILE imports only.)
+- `tsc` clean ≠ app correct: strings are not type-checked, so always test the URL in Postman.
+- When a new route "does nothing", suspect the path text first.
+
+<br>
+
+---
+
+## 13. Typo `funciton` in `controller.ts` → 6 `tsc` errors
+
+*2026-11-17 · Step 4.5*
+
+**Problem**
+
+`npx tsc --noEmit` printed 6 errors, all on line 42 (`export async funciton logoutController`).
+
+**Cause**
+
+One misspelled keyword. TypeScript didn't recognise the word, so it misread the rest of the line and produced 5 follow-up errors.
+
+**Fix**
+
+`funciton` → `function`.
+
+**Lesson**
+
+- Many errors on the same line = fix the FIRST error, then run again.
+- The first message even said "Did you mean 'function'?" — read it before the rest.

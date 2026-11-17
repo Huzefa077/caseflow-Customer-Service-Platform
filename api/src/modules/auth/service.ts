@@ -48,6 +48,22 @@ export async function refresh(token: string) {
     );
     return {accessToken};
 }
+//_____________________________________________________________________
+
+export async function logout(token: string){
+    //it gets the token from controller.ts file.
+    //this token is searched in the db so that we know which one to set true for revokedAt attribute.
+    //all we need to do is first make hash of this token, 
+    // search it in the refresh token table, 
+    // and set revokedAt : null to revokedAt new Date() ; 
+    // today it means
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    await prisma.refreshToken.updateMany({
+        where:{ tokenHash , revokedAt: null},
+        data: { revokedAt: new Date()},
+    });
+}
 
 //_____________________________________________________________________
 
@@ -87,10 +103,10 @@ export async function login(email: string, password: string) {
 
 // ─── STEPS (what this file does, in plain words) ───
 // login(email, password)
-//   1. find the user by email
-//   2. no user, or deactivated? → stop with an error
+//   1. find the user by email.
+//   2. no user, or deactivated? → stop with an error.
 //   3. does the password match the saved hash?
-//   4. password matches -> continue
-//   5. make a JWT access token (id + role, signed with the secret, valid 15 min)
-//   6. return the user + the token
+//   4. password matches -> continue.
+//   5. make a JWT access token (id + role, signed with the secret, valid 15 min).
+//   6. return the user + the token.
 
