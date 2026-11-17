@@ -13,7 +13,7 @@
 9. Interview questions
 10. Open questions
 
-> Daily to-do list lives in `TO-DO.txt`.
+> Daily to-do list lives in `TO-DO.md` (plain text, High / Medium / Low priority, git-ignored).
 
 <br>
 
@@ -24,15 +24,31 @@
 | | |
 |---|---|
 | **Week** | 1 |
-| **Step** | 3 — create-user + login |
-| **Sub-step** | 3.6 — Postman checks + commit + first PR |
-| **Git branch** | `step-3-login` |
+| **Step** | 4 — authenticate middleware + refresh token + logout |
+| **Sub-step** | 4.5 logout finished (Postman: login → logout 200 → refresh 401) — next: commit 4.5, then 4.6 full test + PR |
+| **Git branch** | `step-4-auth` (created; GitHub `step-3-login` deleted) |
 
 **Next thing to do:**
 
-- Postman: right password → 200 + `accessToken`; wrong password / wrong email → 401
-- From root: `git status` (no `.env`!) → `git add .` → commit → `git push`
-- GitHub: PR `step-3-login` → `main` → read the changes → merge → `git switch main` → `git pull`
+- 4.1–4.4 committed + pushed to `step-4-auth` ✅ (last commit `d79e9f8`; PR comes at 4.6)
+- ✅ `tokenHash` is now `@unique` (migration `20261116113335_token_hash_unique` applied, `prisma generate` run, `tsc` clean). Not committed yet.
+- **Do NOT upgrade Prisma** when it shows 'Update available 7.10.1 -> 8.0.0-rc.33': it is a release candidate (my own recipe: never install `rc`).
+- Commit 4.5 (from the `CaseFlow/` root): `git add .` → commit `Step 4.5: logout + unique token hash` → push
+- Then 4.6: full Postman flow → commit → PR → merge → Step 4 done.
+- **Reproduce step (still to do):** write the refresh flow in my own words (service + controller), no peeking.
+
+**Step 4 plan (Core / Bonus):**
+
+| Sub-step | Time box | Part | Status |
+|---|---|---|---|
+| 4.1 `authenticate` middleware + `GET /auth/me` | 1.5 h | 🟢 Core | ⏳ part a ✅ (guard works, 3 Postman tests pass) · part b `req.user` ✅ · part c `/me` replies with `req.user` ✅ → **4.1 done** |
+| 4.2 `RefreshToken` model + migration | 1 h | 🟢 Core | ✅ |
+| 4.3 Login creates refresh token (hash → DB → httpOnly cookie) | 1 h | 🔵 Bonus | ✅ |
+| 4.4 `POST /auth/refresh` → new access token | 45 min | 🔵 Bonus | ✅ |
+| 4.5 `POST /auth/logout` → revoke + clear cookie | 30 min | 🔵 Bonus | ✅ |
+| 4.6 Postman full flow → commit → PR → merge | 45 min | 🔵 Bonus | ⬜ |
+
+> Core done = a good day. Bonus = a great day. 15 min break after every block.
 
 **Step 3 status:**
 
@@ -43,14 +59,14 @@
 | 3.3 First Admin script | 40 min | ✅ |
 | 3.4 `POST /auth/login` | 40 min | ✅ service + controller + routes, wired in `app.ts` under `/auth`, tested in Postman |
 | 3.5 JWT | 40 min | ✅ login returns `{ user, accessToken }`, payload checked on jwt.io |
-| 3.6 Postman test + commit | 20 min | ⬜ |
+| 3.6 Postman test + commit | 20 min | ✅ PR #1 merged into `main` (`c1f16b0`), local branch deleted |
 
-> 3.1–3.4 are committed and pushed to GitHub branch `step-3-login`.
+> **Step 3 finished ✅ (2026-11-02)** — merged into `main` through my first Pull Request (#1).
 
 **Pending check questions:**
 
 1. ✅ Why the same login error message? → So an attacker can't learn which emails exist ("user enumeration").
-2. ⬜ PR base vs compare — which is which?
+2. ✅ PR base vs compare → **base** = where the work goes INTO (`main`), **compare** = where it comes FROM (`step-3-login`).
 
 > Skipped the 3.1 check questions + rewrite-from-memory for now — my choice.
 
@@ -177,14 +193,28 @@
 - [x] 2.2 Prisma installed (7.10.1), `prisma.config.ts` uses `DIRECT_URL`, `User` model + `Role` enum written, `npx prisma validate` passes
 - [x] 2.3 First migration `20261025065144_init` → `users` table + `Role` enum created in Neon
 
-### Step 3 — Create-user + login ⏳
+### Step 3 — Create-user + login ✅
 
 - [x] 3.1 `npx prisma generate`, installed `@prisma/adapter-pg@7.10.1`, `npm audit fix`, wrote `src/config/db.ts` — test printed `Users in database: 0`
 - [x] 3.2 Installed `bcryptjs`; hashed `secret123` twice → 2 different hashes (salt); `bcrypt.compare` → `true` / `false`
 - [x] 3.3 `.env` has `ADMIN_EMAIL`/`ADMIN_PASSWORD` (fake ones in `.env.example`); `src/scripts/create-admin.ts` created the first Admin; 2nd run → `P2002` unique email error (expected)
 - [x] 3.4 `POST /auth/login`: `service.ts` (find user → `isActive` → `bcrypt.compare`), `controller.ts` (200 / 401), `routes.ts`, `app.use("/auth", authRoutes)` in `app.ts`; tested in Postman (2026-10-31)
 - [x] 3.5 Installed `jsonwebtoken` + `@types/jsonwebtoken`; 64-char `JWT_ACCESS_SECRET` in `.env`; `service.ts` signs `{ sub, role }` for `15m`; controller returns `{ user, accessToken }`; decoded on jwt.io (2026-11-01)
-- [ ] 3.6 Postman test + commit
+- [x] 3.6 Postman re-check, commit `1c7952c`, push, PR #1 `step-3-login` → `main`, merged (`c1f16b0`), `git switch main` + `git pull`, local branch deleted (2026-11-02)
+
+### Step 4 — authenticate + refresh token + logout ⏳
+
+- [ ] 4.1 `authenticate` middleware
+  - [x] a) `src/middleware/authenticate.ts`: read `Authorization` header → `Bearer ` check → `split(" ")[1]` → `jwt.verify` → `next()` or 401; `GET /auth/me` test route; Postman: no token 401 · real token 200 · edited token 401 (2026-11-02)
+  - [x] b) `req.user = { id: payload.sub, role: payload.role }` + `src/types/express.d.ts` so TypeScript knows `req.user` exists (2026-11-04)
+  - [x] c) `meController` in `controller.ts` replies `{ user: req.user }`; route is `router.get("/me", authenticate, meController)`; Postman returns my id + role (2026-11-04)
+
+- [x] 4.2 `RefreshToken` model (+ `@relation` to `User`) in `schema.prisma`; `npx prisma migrate dev --name refresh_token` → `20261104184147_refresh_token` created `refresh_tokens` (5 columns + foreign key to `users`) (2026-11-04)
+
+- [x] 4.3 Login creates a refresh token (commit `382ad10`, pushed)
+  - [x] a) tested `crypto.randomBytes(32)` + SHA-256 hash in the terminal (random each time) (2026-11-05)
+  - [x] b) `createRefreshToken(userId)` in `service.ts`: random token → SHA-256 hash → 7-day `expiresAt` → saves a row → returns the REAL token; ran `npx prisma generate` so `prisma.refreshToken` exists (BUG_DIARY #10)
+  - [x] c) `login()` calls `createRefreshToken(user.id)` and returns it; `loginController` destructures it from the service result (NOT `req.body`) and sends `res.cookie("refreshToken", ..., { httpOnly: true, maxAge: 7 days })`; Postman Cookies tab shows it: HttpOnly true, expires in 7 days (2026-11-05)
 
 > **Note:** the project folder was moved and the old chat was lost. This file was rebuilt on 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed. Git was not started yet and there was no `api/` folder.
 
@@ -233,8 +263,11 @@
 | `api/src/config/db.ts` | Builds ONE shared `prisma` object (PrismaClient + `PrismaPg` adapter using `DATABASE_URL`). Other files import it. "The one phone everyone borrows." |
 | `api/src/generated/prisma/` | Code made by `npx prisma generate` from the schema (`client.ts`, `enums.ts`, `models/User.ts`). Git-ignored, never edit. |
 | `api/src/scripts/create-admin.ts` | One-time script: reads admin email/password from `.env`, hashes the password, saves an ADMIN user. |
-| `api/src/modules/auth/routes.ts` | `POST /login` → `loginController`. |
-| `api/src/modules/auth/controller.ts` | Reads `req.body`, calls the service, sends 200 or 401. |
+| `api/src/modules/auth/routes.ts` | `POST /login` → `loginController`; `GET /me` → `authenticate` first, then reply "You are in!". |
+| `api/src/modules/auth/service.ts` (4.3) | `createRefreshToken(userId)`: random token → hash → save row → return the real token. |
+| `api/src/types/express.d.ts` | Types-only file: tells TypeScript that `Request` may have a `user` field. Copy-and-know-the-purpose file, no need to memorise. |
+| `api/src/middleware/authenticate.ts` | The "guard at the door": checks the token in the `Authorization` header; real → `next()`, missing/fake/expired → 401. |
+| `api/src/modules/auth/controller.ts` | Reads `req.body`, calls the service, sends 200 or 401. `meController` replies with `req.user`. |
 | `api/src/modules/auth/service.ts` | Login logic: find user → check `isActive` → `bcrypt.compare`. |
 
 <br>
@@ -299,6 +332,63 @@
 - **Express** — a library that lets the app receive requests (like `GET /health`) and send replies.
 - **Route** — one address the app answers, e.g. `GET /health`. Like one phone extension.
 - **req / res** — request = what the user sent; response = what we send back.
+- **Request = letter in an envelope** — method + URL = the address · `req.headers` = stickers on the envelope (extra info) · `req.body` = the letter inside. Node makes header NAMES lowercase (`authorization`).
+- **Parameter name vs type** — in `(req: Request)`, `req` (left of `:`) is the real thing I use; `Request` (right) is only a label for TypeScript, gone when the code runs.
+- **Scope** — a variable only exists inside the `{ }` where it was made. `req` only exists inside the handler function (BUG_DIARY #8).
+- **`express.d.ts` (declaration merging)** — TypeScript's `Request` has no `user`, so I add it to its list. Only for TypeScript's checker; vanishes at runtime. One-line purpose: "tell TypeScript about the name badge." Even seniors copy this file.
+- **Access token = stateless, refresh token = stateful** — stateless = server keeps no notes between requests; all proof arrives with the request. So an access token can't be ended early (nothing saved to change). The refresh token IS saved (as a hash) in `refresh_tokens`, so logout can set `revokedAt` and the server refuses it later ("revoke" = mark as no longer allowed).
+- **Foreign key** — a column whose value must match an `id` in another table (`refresh_tokens.user_id` → `users.id`). The DB refuses a token for a user that doesn't exist.
+- **One-to-many** — one user, many refresh tokens (laptop + phone). `RefreshToken[]` (the `[]`) marks the "one" side.
+- **Prisma relation lines** — `user User @relation(fields: [userId], references: [id])`: the TYPE `User` says which model to link; `fields` = column here, `references` = column there. A model name as a type = link, NOT a column. Only `userId` is a real column; `user` and `refreshTokens` are code shortcuts. Proof: the migration SQL has 5 columns. (Neon's table view shows an extra "user" link column with no type — a viewer feature, not stored data.)
+- **Migration name** — `--name` is only a label for the folder; the table name comes from `@@map`.
+- **`prisma generate` vs `migrate dev`** — `migrate dev` changes the real database; `generate` rebuilds the Prisma Client (TypeScript code) from `schema.prisma`. Schema changed → run both. One client, one property per model (`model RefreshToken` → `prisma.refreshToken`). Reads `prisma.config.ts` (schema path) + the `generator` block's `output`. Interview line: *"Migrate updates the database, generate updates my code; the schema is the single source of truth."*
+- **SHA-256 vs bcrypt** — bcrypt is slow on purpose, for short guessable passwords. A refresh token is 64 random characters nobody can guess, so fast SHA-256 is enough. Same input → same hash, which lets us look the token up later.
+- **`crypto` (built into Node)** — `randomBytes(32).toString("hex")` makes the random token; `createHash("sha256").update(t).digest("hex")` makes the hash.
+- **Login request flow (in my own words, 2026-11-05)** — request hits `app.ts` → `app.use("/auth", authRoutes)` sends it to `routes.ts` → `routes.ts` picks `loginController` → controller reads `req.body` and calls `login()` in `service.ts` → service returns the result to the controller → the controller sends the answer with `res` and the flow ENDS there (the response never goes back through routes). `routes.ts` only decides where a request goes.
+- **Why the cookie holds the TOKEN but Neon holds the HASH (my most confusing topic, 2026-11-05)**
+  - The server creates a token only at LOGIN. Later it creates nothing: it just hashes what the browser sends and compares.
+  - **At login (once):**
+    ```
+    server makes:  token = "AAA"
+    server saves:  hash("AAA") = "X9"   -> Neon
+    server sends:  "AAA"                -> cookie
+    ```
+  - **Later, the real user comes back:**
+    ```
+    browser sends:        "AAA"  (from the cookie)
+    server hashes it:     hash("AAA") = "X9"
+    server looks in Neon: "X9" exists -> allowed
+    ```
+  - **A thief who stole the Neon table** only has "X9". If they send "X9" as the token, the server hashes it: `hash("X9") = "Q4"` -> not in Neon -> refused. To get "X9" out of the server's hashing they would need "AAA", and a hash can't be reversed.
+  - Same idea as passwords: Neon keeps the hash, never the secret itself.
+  - **Interview line:** *"I store only a hash of the refresh token. On refresh I hash the token from the cookie and look that hash up, so a leaked database can't be used to get new access tokens."*
+- **Cookie** — a small named value the server asks the browser to store (`Set-Cookie` header from `res.cookie(...)`). The browser then sends it back automatically on every later request to that site, with no JavaScript needed. `httpOnly: true` = page JavaScript cannot read it (blocks token theft through injected scripts); `maxAge` = how long the browser keeps it; `secure: true` (production, HTTPS only) = only sent over HTTPS.
+- **Reading cookies needs `cookie-parser` (my words, checked 2026-11-05)**
+  - Express can SET a cookie with `res.cookie(...)`, but it does not READ cookies by default: `req.cookies` (with an s) doesn't exist.
+  - The browser still sends the cookie in the `Cookie` header on every request; Express just doesn't unpack it.
+  - The middleware `cookie-parser` unpacks that header into `req.cookies`. Install: `npm install cookie-parser` and `npm install -D @types/cookie-parser` (type labels, dev-only). In `app.ts`: `import cookieParser from "cookie-parser"` and `app.use(cookieParser())` under `express.json()`.
+  - Why we need it: the frontend sends the refresh token cookie, the backend reads `req.cookies.refreshToken`, hashes it, and compares with the hash saved in Neon.
+- **Where each token lives** — access token: JSON response → kept in memory by the frontend → sent in the `Authorization` header. Refresh token: cookie only → never in the JSON, never readable by JavaScript.
+- **Controller question** — for each variable ask: did the client send it (`req.body`) or did the service give it (result of `login()`)?
+- **`tsc --noEmit` vs `tsx`** — `tsc --noEmit` only CHECKS types (no files written); `tsx` RUNS TypeScript directly without type-checking. `npm run dev` = `tsx watch`.
+- **Why `req.user` is set by the backend (2026-11-08)** — the frontend knows its own role, but the server can't believe the client: anyone can type `"role": "ADMIN"` into Postman. The token payload was written by the server and signed with the secret; if the payload is edited, `jwt.verify` fails. So after verify passes, the payload is the only trusted info about the user. `req.user = { id: payload.sub, role: payload.role }` copies that verified data so later code (`authorize`, cases, audit log) reads it. It is NOT sent by the frontend. **Rule: never trust what the client says about itself; trust only the verified token or the database.** Interview line: *"The server derives identity and role from the signed JWT, never from the request body."*
+- **`refreshAccessToken(token)` in `service.ts` (renamed from `refresh` on 2026-11-17, because it returns a new ACCESS token) (2026-11-09)** — hash the cookie token → `findFirst({ where: { tokenHash }, include: { user: true } })` → refuse if no row, `revokedAt` set, `expiresAt` passed, or user deactivated → `jwt.sign({ sub: row.user.id, role: row.user.role }, secret, { expiresIn: "15m" })`. `include: { user: true }` attaches the connected user (the relation) to the row, so the id/role are `row.user.id` / `row.user.role` (there is no variable called `user` in this function).
+- **JWT payload names** — the payload is an object of `name: value` pairs; names are how `authenticate.ts` finds values (`payload.sub`, `payload.role`). `sub` ("subject") is the standard name for "who the token is about"; both ends must use the same name. Keep the payload small: it is readable by anyone, so only what's needed on every request and rarely changes (id, role).
+- **`as { sub: string; role: string }`** — only a TypeScript label (erased at runtime). `jwt.verify` returns a vague type, so without it `payload.role` is red and `tsc` fails. It doesn't check the token.
+- **`payload` is local, `req` is shared** — `payload` disappears when `authenticate` ends; `req` is passed along the chain, so we copy the data to `req.user`.
+- **TypeScript narrowing** — `const secret = process.env.X` is `string | undefined`; after `if (!secret) throw ...` TypeScript knows it is a string.
+- **jwt.io** — free website where you paste a JWT to read its header/payload; shows the payload isn't secret.
+- **Why `/auth/refresh` has NO `authenticate` guard** — it is called because the access token has EXPIRED; a guard would refuse it. Its proof is the refresh token cookie, checked against Neon by `refreshAccessToken()`. Request chain: `app.ts` → `routes.ts` → `refreshAccessTokenController` → `refreshAccessToken()`.
+- **Who calls refresh automatically?** — the browser/frontend (an Axios interceptor in `web/src/api`, Step 18), not the backend: the backend only answers requests. For now I call it by hand in Postman.
+- **`await` + `try/catch` in a controller** — `refresh()` is async (returns a promise = "result is coming"), so `await` it; it throws on a bad token, so `try/catch` turns that into a clean 401.
+- **Postman: Body = none for no-body requests** — an empty/commented raw JSON body still sends `Content-Type: application/json`, and `express.json()` fails with `Unexpected end of JSON input` (BUG_DIARY #11).
+- **`@unique` + index (2026-11-16)** — `@unique` on `tokenHash` makes the database keep a sorted lookup list (an index): finding a hash is fast instead of reading every row, and two rows can never share a hash. Needs BOTH `migrate dev` and `generate`. Prisma warned that existing duplicates would make it fail; safe here because tokens are random. SQL: `CREATE UNIQUE INDEX refresh_tokens_token_hash_key`.
+- **One row per login/device** — PC and phone logins make 2 separate rows (different random tokens/hashes), both valid; logout on one revokes only its row (`updateMany` where `tokenHash` + `revokedAt: null`). Log out everywhere would use `where: { userId }`.
+- **Logout: backend half + frontend half (2026-11-17)** — backend: `logout(token)` sets `revokedAt` on the row, `res.clearCookie("refreshToken")` deletes the cookie, always replies 200. Frontend (Step 18): throws away the access token from memory. The server can't delete an access token (stateless, nothing saved). A COPIED access token keeps working until its 15 min end, but it can't be renewed (refresh gives 401). A blocklist would make it instant but costs a DB lookup on every request, so apps accept the short window.
+- **Route paths start with `/`** — `"/logout"`, never `"./logout"` (BUG_DIARY #12).
+- **Naming rule (2026-11-17)** — a function's name says what it returns/does (`refresh` → `refreshAccessToken`). A controller's name = its service function + `Controller` (`refreshAccessTokenController`). The public URL stays short (`/auth/refresh`).
+- **Middleware** — a function `(req, res, next)` that runs BEFORE the route. Calls `next()` = "go on", or sends a reply = "stop here". "Guard at the door."
+- **Route with middleware** — `router.get("/me", authenticate, handler)` runs left to right: guard first, reply only if the guard lets you in.
 - **Port** — a numbered "door" the server listens at (ours: 3000).
 - **Why `app.ts` and `server.ts` are split** — app.ts builds the app, server.ts starts it. Tests can import the app without starting a real server.
 - **Folder rule — feature first, then job** — `modules/cases/` holds routes (which URL), controller (read request/reply), service (business rules), schema (valid input). Files that change together live together.
@@ -366,6 +456,11 @@
   - **`jwt.sign(payload, secret, { expiresIn: "15m" })`:** options are NOT part of the token — the library turns `expiresIn` into `exp` in the payload and builds the header itself. `exp − iat = 900` s = 15 min.
   - **Access token = visitor pass:** short-lived so a stolen one is useful only briefly. Refresh token (Step 4) keeps you logged in.
   - **Interview:** *"After login I sign a JWT with the user id and role, valid 15 minutes. The client sends it with each request; the server checks the signature with its secret."*
+- **Authorization header** — the client shows its token on every request as `Authorization: Bearer <token>`. "Bearer" = "whoever carries this pass"; capital B, exact text.
+- **`jwt.verify(token, secret)`** — `jwt` = the library (toolbox), not the token. Checks the whole token's stamp + expiry; real → returns only the payload; fake/expired → throws (so use try/catch).
+- **Server keeps the SECRET, not the token** — on each request it re-stamps the token's header + payload with the secret and checks the stamp matches. 1 letter changed → different stamp → 401. "Teacher knows their own signature, doesn't keep photos of every paper."
+- **Stateless (why not store access tokens)** — no database lookup on every click = fast; any server with the secret can check. The secret never leaves the server and is used on EVERY check. Downside: can't cancel an access token early → keep it short (15 min). The long-lived refresh token IS stored (Step 4.2), so logout can cancel it.
+- **Never log passwords** — logs get stored and read by others. My test `console.log(req.body)` showed the password → removed.
 - **User enumeration** — "email not found" vs "wrong password" tells an attacker which emails exist. Fix: same message + same 401 for both.
 - **DoS (Denial of Service)** — an attack that slows down or crashes a server so real users can't use it.
 
@@ -394,6 +489,14 @@
 | `git log --oneline` | Shows the commit history, one line each. |
 | `git push` | Uploads my commits to GitHub. |
 | `git switch -c step-3-login` | Creates a new branch and moves onto it (uncommitted changes come along). |
+| `git push -u origin step-4-auth` | First push of a new branch; `-u` links it to GitHub so later a plain `git push` works. |
+| `git switch main` | Moves back onto the `main` branch. |
+| `git pull` | Downloads new commits from GitHub (e.g. a merged PR) into my local branch. |
+| `git branch -a` | Lists all branches — local ones and GitHub's (`remotes/origin/...`). |
+| `git branch -d step-3-login` | Deletes a finished local branch (its work is safe in `main`). |
+| `git push origin --delete step-3-login` | Deletes the branch on GitHub. |
+| `git fetch --prune` | Updates my list of GitHub branches and removes ones deleted there. |
+| `rm git merge-` | Deleted 2 empty stray files created by a mistyped command. |
 
 ### npm
 
@@ -463,6 +566,20 @@ A saved SQL file that changes the database structure. Committed to Git so every 
 **3. Why two database URLs?**
 
 The app uses the pooled URL (a middleman shares connections, good for many requests). Migrations use the direct URL, because schema changes need one real, stable connection.
+
+### Step 3 — Create-user + login
+
+**1. How do you store passwords?**
+
+Never the real password. bcrypt adds a random salt and hashes slowly (cost 10), and I store only that hash. At login, `bcrypt.compare` re-hashes the typed password with the stored salt and checks for a match.
+
+**2. Walk me through your login request.**
+
+`POST /auth/login` → `routes.ts` sends it to `loginController` → it reads email + password from `req.body` → `service.ts` finds the user, checks `isActive`, compares the password → signs a JWT with `{ sub, role }` valid 15 min → controller replies `200 { user, accessToken }`, or `401` with the same message for wrong email or wrong password (prevents user enumeration).
+
+**3. What is inside your JWT, and why can't a user change their role in it?**
+
+Header (algorithm), payload (`sub` = user id, `role`, `iat`, `exp`), signature. The payload is readable by anyone, so no secrets in it. The signature is made with the server's secret — if someone edits the payload, the signature no longer matches and the server rejects it (checked by the `authenticate` middleware in Step 4).
 
 <br>
 

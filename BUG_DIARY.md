@@ -192,3 +192,168 @@ Deleted the admin row in Neon (Tables → users), re-ran `npx tsx src/scripts/cr
 - The database keeps the hash from the moment the user was created; changing config later changes nothing.
 - A real app needs a "reset password" action that re-hashes.
 - My `catch` hides the real reason — later (Step 6) errors get logged.
+
+<br>
+
+---
+
+## 8. `npm run dev` crashed: "Cannot find name 'req'" in `controller.ts`
+
+*2026-11-02 · Step 4.1*
+
+**Problem**
+
+Added `console.log("headers:", req.headers)` to see a real request → the server would not start.
+
+**Cause**
+
+- The 2 `console.log` lines were put at the **top of the file**, outside `loginController`.
+- `req` only exists **inside** the function — Express creates it fresh for each request and passes it in.
+- Top-of-file code runs once when the server starts, when there is no request yet → `req` is not defined.
+
+**Fix**
+
+Moved the 2 lines inside `loginController`, as its first lines.
+
+**Lesson**
+
+- A variable only exists inside the `{ }` where it was created ("scope").
+- `req` and `res` = one specific request/response, so they only live inside the handler function.
+- Red squiggles in a file that nothing imports yet (like `authenticate.ts`) don't stop the server — only files the app actually loads can crash it.
+
+<br>
+
+---
+
+## 9. `npx tsx` said "Need to install tsx" (wrong folder again)
+
+*2026-11-05 · Step 4.3*
+
+**Problem**
+
+Ran `npx tsx -e "..."` and npx asked "Need to install the following packages: tsx. Ok to proceed?"
+
+**Cause**
+
+- The terminal was in the project root (`CaseFlow/`), not inside `api/`.
+- `tsx` is installed only in `api/node_modules`, so npx from the root can't find it and offers to download a temporary copy.
+
+**Fix**
+
+`Ctrl + C`, `cd api`, `pwd` (must end in `\api`), ran the same command again → printed `token:` and `hash :` with no question.
+
+**Lesson**
+
+- "Need to install..." from npx = STOP, I'm in the wrong folder.
+- `pwd` before every `npx` / `npm` command.
+- Answering `y` only downloaded a temporary copy to npx's cache; nothing was added to the project.
+
+<br>
+
+---
+
+## 10. `prisma.refreshToken` "does not exist" after the migration
+
+*2026-11-05 · Step 4.3*
+
+**Problem**
+
+After `migrate dev` created `refresh_tokens` in Neon, `prisma.refreshToken.create(...)` was red: "Property 'refreshToken' does not exist".
+
+**Cause**
+
+- `migrate dev` changed the real database, but did NOT rebuild the Prisma Client (the generated TypeScript code).
+- `src/generated/prisma/models/` still had only `User.ts`, so the client didn't know about the new model.
+- (I had wrongly said `migrate dev` might run `generate` by itself.)
+
+**Fix**
+
+`npx prisma generate` from `api/` → `models/RefreshToken.ts` appeared → `npx tsc --noEmit` printed nothing.
+
+**Lesson**
+
+- Schema changed → run BOTH: `migrate dev` (updates the database) and `generate` (updates my code).
+- `prisma.refreshToken` is not written anywhere by me: Prisma makes it from the model name `RefreshToken` (first letter lowercased). `@@map` only names the table in Neon.
+- There is ONE client; `generate` adds one property per model.
+
+<br>
+
+---
+
+## 11. `POST /auth/refresh` → `400 SyntaxError: Unexpected end of JSON input`
+
+*2026-11-09 · Step 4.4*
+
+**Problem**
+
+Postman returned `400 Bad Request` with an HTML error page: `SyntaxError: Unexpected end of JSON input` (stack inside `body-parser`).
+
+**Cause**
+
+- The request Body was set to `raw` + `JSON`, but every line was commented out (`// { ...`), so the body was effectively EMPTY.
+- Postman still sent the header `Content-Type: application/json`.
+- `express.json()` saw that header, tried to parse the empty text as JSON, and failed before the request even reached my route.
+- My code was fine.
+
+**Fix**
+
+Postman → Body tab → choose **none**. Then no JSON header + no body → `express.json()` skips it → the controller runs.
+
+**Lesson**
+
+- `express.json()` runs first on every request that says it is JSON, so a bad/empty JSON body fails before my routes.
+- A request that needs no body (like refresh, which uses only the cookie) must have Body = none in Postman.
+- This error page also shows my local file paths; the central error handler (Step 6) will hide such details.
+
+<br>
+
+---
+
+## 12. `POST /auth/logout` did nothing (route path typo `"./logout"`)
+
+*2026-11-17 · Step 4.5*
+
+**Problem**
+
+Postman `POST /auth/logout` did not work, although `tsc` showed no errors.
+
+**Cause**
+
+- In `routes.ts` the path was written `"./logout"` (stray dot) instead of `"/logout"`.
+- Express treats the path as plain text, so it registered a URL that starts with `./` which no request matches → `404 Cannot POST /auth/logout`.
+- TypeScript can't catch it: a path is just a string.
+
+**Fix**
+
+`router.post("/logout", logoutController);` → saved → Postman: `200 { "message": "Logged out" }`.
+
+**Lesson**
+
+- Route paths start with `/`, no dot. (`./` and `../` are for FILE imports only.)
+- `tsc` clean ≠ app correct: strings are not type-checked, so always test the URL in Postman.
+- When a new route "does nothing", suspect the path text first.
+
+<br>
+
+---
+
+## 13. Typo `funciton` in `controller.ts` → 6 `tsc` errors
+
+*2026-11-17 · Step 4.5*
+
+**Problem**
+
+`npx tsc --noEmit` printed 6 errors, all on line 42 (`export async funciton logoutController`).
+
+**Cause**
+
+One misspelled keyword. TypeScript didn't recognise the word, so it misread the rest of the line and produced 5 follow-up errors.
+
+**Fix**
+
+`funciton` → `function`.
+
+**Lesson**
+
+- Many errors on the same line = fix the FIRST error, then run again.
+- The first message even said "Did you mean 'function'?" — read it before the rest.
