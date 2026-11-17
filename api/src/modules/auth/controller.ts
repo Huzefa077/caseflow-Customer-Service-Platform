@@ -2,7 +2,7 @@
 // WHY:  keeps HTTP details (req, res, status codes) out of the login logic in service.ts.
 
 import { Request, Response } from "express";
-import { login, refresh, logout } from "./service";
+import { login, refreshAccessToken, logout } from "./service";
 
 
 //________________________________________________________________________________________
@@ -37,13 +37,13 @@ export async function loginController(req: Request, res: Response) {
 // reads the refresh token from the cookie and asks the service for a NEW access token.
 // no cookie, or the token is fake / expired / revoked -> 401.
 
-export async function refreshController(req: Request, res: Response) {
+export async function refreshAccessTokenController(req: Request, res: Response) {
     const token = req.cookies.refreshToken;
      if (!token) {
         return res.status(401).json({ message: "No refresh token, please login" });
     }
     try {
-        const { accessToken } = await refresh(token);
+        const { accessToken } = await refreshAccessToken(token);
         res.status(200).json({ accessToken });
     } catch(err){
         res.status(401).json({message: "Auto id verification failed, Please login again"});

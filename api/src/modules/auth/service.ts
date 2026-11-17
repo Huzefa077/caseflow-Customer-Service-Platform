@@ -22,7 +22,7 @@ export async function createRefreshToken(userId: string) {
 }
 //_____________________________________________________________________
 
-export async function refresh(token: string) {
+export async function refreshAccessToken(token: string) {
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const row = await prisma.refreshToken.findFirst({
         where: { tokenHash },
