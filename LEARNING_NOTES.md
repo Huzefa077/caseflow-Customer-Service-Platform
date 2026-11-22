@@ -24,20 +24,21 @@
 | | |
 |---|---|
 | **Week** | 1 |
-| **Step** | 4 — authenticate middleware + refresh token + logout |
-| **Sub-step** | 4.5 logout finished (Postman: login → logout 200 → refresh 401) — next: commit 4.5, then 4.6 full test + PR |
-| **Git branch** | `step-4-auth` (created; GitHub `step-3-login` deleted) |
+| **Step** | 5 — `authorize(roles)` middleware (RBAC = Role-Based Access Control) |
+| **Sub-step** | 5.4 — commit `authorize.ts` → push → PR → merge (5.1–5.3 done ✅) |
+| **Git branch** | `step-5-authorize` (nothing committed yet) |
 
 **Next thing to do:**
 
-- 4.1–4.4 committed + pushed to `step-4-auth` ✅ (last commit `d79e9f8`; PR comes at 4.6)
-- ✅ `tokenHash` is now `@unique` (migration `20261116113335_token_hash_unique` applied, `prisma generate` run, `tsc` clean). Not committed yet.
-- **Do NOT upgrade Prisma** when it shows 'Update available 7.10.1 -> 8.0.0-rc.33': it is a release candidate (my own recipe: never install `rc`).
-- Commit 4.5 (from the `CaseFlow/` root): `git add .` → commit `Step 4.5: logout + unique token hash` → push
-- Then 4.6: full Postman flow → commit → PR → merge → Step 4 done.
-- **Reproduce step (still to do):** write the refresh flow in my own words (service + controller), no peeking.
+- `git add api/src/middleware/authorize.ts LEARNING_NOTES.md` (+ `authenticate.ts` only if I want my comment rewrite in this commit) → commit → push → PR → merge → `git switch main` + `git pull`
+- Then Step 6: Zod validation middleware, `AppError` class, central error handler, Pino logging
+- Still shaky: closures (outer function runs ONCE at startup, inner function runs on EVERY request) — see Open questions
 
-**Step 4 plan (Core / Bonus):**
+> **5.1–5.3 finished ✅ (2026-11-22).** Postman: no token → 401 · AGENT on `authorize("ADMIN")` → 403 · ADMIN → 200 · AGENT on `authorize("AGENT")` → 200. Test route deleted, `create-admin.ts` restored to the Admin version.
+
+> **Step 4 finished ✅ (2026-11-17)** — merged through PR #2 (`1567ea0`). Branch `step-4-auth` deleted locally.
+
+**Step 4 plan (Core / Bonus) — all done:**
 
 | Sub-step | Time box | Part | Status |
 |---|---|---|---|
@@ -46,7 +47,7 @@
 | 4.3 Login creates refresh token (hash → DB → httpOnly cookie) | 1 h | 🔵 Bonus | ✅ |
 | 4.4 `POST /auth/refresh` → new access token | 45 min | 🔵 Bonus | ✅ |
 | 4.5 `POST /auth/logout` → revoke + clear cookie | 30 min | 🔵 Bonus | ✅ |
-| 4.6 Postman full flow → commit → PR → merge | 45 min | 🔵 Bonus | ⬜ |
+| 4.6 Postman full flow → commit → PR → merge | 45 min | 🔵 Bonus | ✅ PR #2 merged |
 
 > Core done = a good day. Bonus = a great day. 15 min break after every block.
 
@@ -202,7 +203,7 @@
 - [x] 3.5 Installed `jsonwebtoken` + `@types/jsonwebtoken`; 64-char `JWT_ACCESS_SECRET` in `.env`; `service.ts` signs `{ sub, role }` for `15m`; controller returns `{ user, accessToken }`; decoded on jwt.io (2026-11-01)
 - [x] 3.6 Postman re-check, commit `1c7952c`, push, PR #1 `step-3-login` → `main`, merged (`c1f16b0`), `git switch main` + `git pull`, local branch deleted (2026-11-02)
 
-### Step 4 — authenticate + refresh token + logout ⏳
+### Step 4 — authenticate + refresh token + logout ✅
 
 - [ ] 4.1 `authenticate` middleware
   - [x] a) `src/middleware/authenticate.ts`: read `Authorization` header → `Bearer ` check → `split(" ")[1]` → `jwt.verify` → `next()` or 401; `GET /auth/me` test route; Postman: no token 401 · real token 200 · edited token 401 (2026-11-02)
@@ -215,6 +216,13 @@
   - [x] a) tested `crypto.randomBytes(32)` + SHA-256 hash in the terminal (random each time) (2026-11-05)
   - [x] b) `createRefreshToken(userId)` in `service.ts`: random token → SHA-256 hash → 7-day `expiresAt` → saves a row → returns the REAL token; ran `npx prisma generate` so `prisma.refreshToken` exists (BUG_DIARY #10)
   - [x] c) `login()` calls `createRefreshToken(user.id)` and returns it; `loginController` destructures it from the service result (NOT `req.body`) and sends `res.cookie("refreshToken", ..., { httpOnly: true, maxAge: 7 days })`; Postman Cookies tab shows it: HttpOnly true, expires in 7 days (2026-11-05)
+
+### Step 5 — authorize (RBAC)
+
+- [x] 5.1 Concept: authentication ("who are you?" → 401) vs authorization ("what may you do?" → 403) (2026-11-20)
+- [x] 5.2 `src/middleware/authorize.ts`: `authorize(...roles)` returns `(req, res, next)`; no `req.user` → 401, role not in `roles` → 403, else `next()`. My first tries had everything in one function; Claude wrote the final version after I asked for it (2026-11-22)
+- [x] 5.3 Postman test with a throwaway `GET /auth/admin-only` (deleted afterwards) and a temporary AGENT user from `create-admin.ts` (restored afterwards) (2026-11-22)
+- [ ] 5.4 Commit + PR + merge
 
 > **Note:** the project folder was moved and the old chat was lost. This file was rebuilt on 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed. Git was not started yet and there was no `api/` folder.
 
@@ -267,6 +275,7 @@
 | `api/src/modules/auth/service.ts` (4.3) | `createRefreshToken(userId)`: random token → hash → save row → return the real token. |
 | `api/src/types/express.d.ts` | Types-only file: tells TypeScript that `Request` may have a `user` field. Copy-and-know-the-purpose file, no need to memorise. |
 | `api/src/middleware/authenticate.ts` | The "guard at the door": checks the token in the `Authorization` header; real → `next()`, missing/fake/expired → 401. |
+| `api/src/middleware/authorize.ts` (5.2) | The "badge check at the room door": `authorize("ADMIN", ...)` lets only those roles through; 401 if no `req.user`, 403 if the role is not in the list. Runs AFTER `authenticate`. |
 | `api/src/modules/auth/controller.ts` | Reads `req.body`, calls the service, sends 200 or 401. `meController` replies with `req.user`. |
 | `api/src/modules/auth/service.ts` | Login logic: find user → check `isActive` → `bcrypt.compare`. |
 
@@ -460,6 +469,13 @@
 - **`jwt.verify(token, secret)`** — `jwt` = the library (toolbox), not the token. Checks the whole token's stamp + expiry; real → returns only the payload; fake/expired → throws (so use try/catch).
 - **Server keeps the SECRET, not the token** — on each request it re-stamps the token's header + payload with the secret and checks the stamp matches. 1 letter changed → different stamp → 401. "Teacher knows their own signature, doesn't keep photos of every paper."
 - **Stateless (why not store access tokens)** — no database lookup on every click = fast; any server with the secret can check. The secret never leaves the server and is used on EVERY check. Downside: can't cancel an access token early → keep it short (15 min). The long-lived refresh token IS stored (Step 4.2), so logout can cancel it.
+- **Authentication vs authorization (Step 5)** — authentication = "who are you?" (`authenticate`, 401 = really "unauthenticated"); authorization = "are you allowed here?" (`authorize`, 403 Forbidden). Request order: `authenticate` → `authorize` → controller; `authorize` needs `req.user`, which only `authenticate` sets.
+- **RBAC (Role-Based Access Control)** — permissions belong to roles (ADMIN / TEAM_LEAD / AGENT), not to single users. Always checked on the SERVER; hiding a UI button is not security.
+- **Function that returns a function (closure)** — `authorize(...roles)` runs ONCE when the route is defined and returns the inner `(req, res, next)`, which Express runs on EVERY request. The inner one still remembers `roles`. The checks are inside the inner function because `req` only exists when a visitor arrives. Toy example: `makeGreeter("Hello")` → `sayHello("Ali")`.
+- **`...roles` (rest parameter)** — collects all arguments into an array: `authorize("A","B")` → `roles = ["A","B"]`. `roles.includes(x)` returns `true` / `false` (not a message); the `if` around it decides what to send.
+- **`return res.status(...).json(...)`** — `res...json` sends the reply; the `return` stops the function. Without `return` the code continues and may call `next()` after already replying.
+- **Role strings are case-sensitive** — `"agent"` ≠ `"AGENT"`. Typos silently lock everyone out → later use the Prisma `Role` enum instead of typed strings.
+- **Testing permissions:** always check WHOSE token you send (`GET /auth/me` shows the role). My "surprising" results came from sending the wrong token, not from a bug.
 - **Never log passwords** — logs get stored and read by others. My test `console.log(req.body)` showed the password → removed.
 - **User enumeration** — "email not found" vs "wrong password" tells an attacker which emails exist. Fix: same message + same 401 for both.
 - **DoS (Denial of Service)** — an attack that slows down or crashes a server so real users can't use it.
@@ -585,9 +601,55 @@ Header (algorithm), payload (`sub` = user id, `role`, `iat`, `exp`), signature. 
 
 ---
 
+### Step 4 — authenticate + refresh token + logout
+
+**1. How does your server know who is calling on every request?**
+
+The client sends the access token in the `Authorization: Bearer <token>` header. The `authenticate` middleware checks its signature and expiry with `jwt.verify` and the secret (nothing is stored on the server, so it is stateless), then puts the id and role on `req.user` for the code that runs after it. It never trusts a role sent in the request body.
+
+**2. Why two tokens, and why is the refresh token stored as a hash?**
+
+The access token is short (15 min) and can't be cancelled early because nothing is saved. The refresh token lasts 7 days, lives in an httpOnly cookie, and its SHA-256 hash is saved in `refresh_tokens`, so logout can set `revokedAt`. Only the hash is saved so a leaked database can't be used to get new access tokens; the hash column is `@unique` for fast lookup.
+
+**3. What happens when a user logs out? Can the old access token still be used?**
+
+`logout` sets `revokedAt` on that token's row and clears the cookie, so `/auth/refresh` returns 401. A copied access token still works until its 15 minutes end, because the server can't delete a stateless token. The frontend throws its copy away. A blocklist would fix it but needs a database lookup on every request.
+
+<br>
+
+---
+
+### Step 5 — authorize (RBAC)
+
+**1. What is the difference between authentication and authorization, and which HTTP status codes do they use?**
+
+Authentication asks "who are you?" and fails with 401 (no or bad token). Authorization asks "are you allowed to do this?" and fails with 403 (known user, wrong role). In CaseFlow, `authenticate` runs first and sets `req.user`; `authorize` then checks `req.user.role`.
+
+**2. Why is `authorize(...roles)` a function that returns another function?**
+
+Each route needs its own list of allowed roles, e.g. `authorize("ADMIN")` or `authorize("ADMIN", "TEAM_LEAD")`. Express only passes `(req, res, next)` to a middleware, so the roles are given in an outer function that runs once at startup. It returns the inner middleware, which remembers the roles and runs on every request.
+
+**3. Why must permissions be checked on the server and not only by hiding buttons in the UI?**
+
+Anyone can call the API directly with Postman or curl, skipping the UI. If the server doesn't check the role from the verified token, an Agent could call admin endpoints. The role must come from the signed token, never from the request body.
+
+<br>
+
+---
+
 ## 10. Open questions / things I found confusing
 
 ### 🅿️ Parked (come back later)
+
+- **Outer vs inner function in `authorize` (2026-11-22)**
+  - I guessed the OUTER function runs once per user request. Correct: outer runs ONCE at server start (`authorize("ADMIN")` has brackets in the route line); the INNER runs on every request.
+  - I said "I don't have the understanding" about why the checks sit in the inner function. Short answer: the checks need the visitor's `req`, and no visitor exists at startup.
+  - Revisit at Step 6 (Zod `validate(schema)` has the same shape) and Step 8 (first real use of `authorize("ADMIN")`).
+
+- **"Continue with Google" login (2026-11-20)**
+  - I want this in the end product. It is NOT in CLAUDE.md's plan or the "Later" list, so it is parked until Week 4 is finished (as a stretch item).
+  - Step 5 (`authorize`) is NOT affected: it only reads `req.user.role`, however the user logged in.
+  - Things to remember for later: Google = OAuth 2.0 / OpenID Connect; match the Google email to a user an Admin already created (staff only, no self-signup); `password_hash` would need to be optional; after Google confirms, we still issue OUR OWN JWT + refresh token.
 
 - **Controller's role (2026-11-01)**
   - I don't yet fully see how `controller.ts` works as a "middleman" or what it really adds (and how it helps stop the app crashing).
