@@ -11,7 +11,6 @@ router.post("/refresh", refreshAccessTokenController);
 router.post("/logout", logoutController);
 router.get("/me", authenticate, meController);
 
-
 export default router;
 
 
