@@ -4,9 +4,12 @@
 import { authenticate } from "../../middleware/authenticate";
 import { Router } from "express";
 import { loginController, meController, refreshAccessTokenController, logoutController } from "./controller";
+import {loginSchema} from "./schema";
+import {validate} from "../../middleware/validate";
+
 
 const router = Router();
-router.post("/login", loginController);
+router.post("/login", validate(loginSchema), loginController);
 router.post("/refresh", refreshAccessTokenController);
 router.post("/logout", logoutController);
 router.get("/me", authenticate, meController);
@@ -19,3 +22,4 @@ export default router;
 //   1. make a Router (a mini list of URLs for auth)
 //   2. POST /login → run loginController
 //   3. export it, so app.ts can plug it in
+//   4. POST /login → validate body first, then loginController".

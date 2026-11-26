@@ -357,3 +357,52 @@ One misspelled keyword. TypeScript didn't recognise the word, so it misread the 
 
 - Many errors on the same line = fix the FIRST error, then run again.
 - The first message even said "Did you mean 'function'?" — read it before the rest.
+
+<br>
+
+---
+
+## 14. Wrong import path for `validate` in `routes.ts`
+
+*2026-11-23 · Step 6.2*
+
+**Problem**
+
+`routes.ts` had `import {validate} from "./validate";` — TypeScript could not find the file and the server would not start.
+
+**Cause**
+
+`./` means "this same folder" (`modules/auth/`), but `validate.ts` lives in `src/middleware/`.
+
+**Fix**
+
+Point to the right folder, the same way `authenticate` is imported: `"../../middleware/validate"`.
+
+**Lesson**
+
+- `./` = same folder, `../` = one folder up. Count the folders before writing the path.
+- "Cannot find module" = check the path first.
+
+<br>
+
+---
+
+## 15. `errorHandler` used a fixed `400` instead of `err.statusCode`
+
+*2026-11-24 · Step 6.3*
+
+**Problem**
+
+The handler replied `res.status(400)` for every `AppError`, so a 403 or 404 error would still have come out as 400.
+
+**Cause**
+
+I chose one number myself instead of reading the number the error carries (the whole point of `AppError`).
+
+**Fix**
+
+`res.status(err.statusCode)`.
+
+**Lesson**
+
+- The thrower decides the number; the handler only reads it.

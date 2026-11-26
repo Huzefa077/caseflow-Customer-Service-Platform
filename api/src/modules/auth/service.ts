@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "../../config/db";
 
+import {AppError} from "../../utils/AppError";
+
 //_____________________________________________________________________
 
 //this function is used inside this file only. Inside login function.
@@ -71,11 +73,11 @@ export async function login(email: string, password: string) {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user || !user.isActive) {
-        throw new Error("Invalid email or password");
+        throw new AppError("Invalid email or password",401);
     }
     const ok = await bcrypt.compare(password, user.passwordHash)
     if (!ok) {
-        throw new Error("Invalid email or password");
+        throw new AppError("Invalid email or password",401);
     }
 
     const secret = process.env.JWT_ACCESS_SECRET;

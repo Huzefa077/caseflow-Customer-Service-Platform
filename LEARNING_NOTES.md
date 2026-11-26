@@ -24,17 +24,20 @@
 | | |
 |---|---|
 | **Week** | 1 |
-| **Step** | 5 — `authorize(roles)` middleware (RBAC = Role-Based Access Control) |
-| **Sub-step** | 5.4 — commit `authorize.ts` → push → PR → merge (5.1–5.3 done ✅) |
-| **Git branch** | `step-5-authorize` (nothing committed yet) |
+| **Step** | 6 — Zod validation middleware, `AppError` class, central error handler, Pino logging |
+| **Sub-step** | 6.2 done ✅ (Zod schema + `validate` middleware on `/auth/login`) → next 6.3 `AppError` + central error handler |
+| **Git branch** | `step-6-validation` (nothing committed yet for Step 6) |
 
 **Next thing to do:**
 
-- `git add api/src/middleware/authorize.ts LEARNING_NOTES.md` (+ `authenticate.ts` only if I want my comment rewrite in this commit) → commit → push → PR → merge → `git switch main` + `git pull`
-- Then Step 6: Zod validation middleware, `AppError` class, central error handler, Pino logging
-- Still shaky: closures (outer function runs ONCE at startup, inner function runs on EVERY request) — see Open questions
+- 6.3 `AppError` class (an error that carries a status code) + central error handler `(err, req, res, next)`; then `validate` and the controllers throw/forward `AppError` instead of each writing their own `res.status(...)`
+- 6.4 Pino logging
+- 6.5 Postman tests, commit, PR
+- Still shaky: closures (outer function runs ONCE at startup, inner function runs on EVERY request). On 2026-11-23 I said `loginSchema` runs every time — wrong: `loginSchema` is an object (checklist), the returned inner function runs every time. See Open questions
 
-> **5.1–5.3 finished ✅ (2026-11-22).** Postman: no token → 401 · AGENT on `authorize("ADMIN")` → 403 · ADMIN → 200 · AGENT on `authorize("AGENT")` → 200. Test route deleted, `create-admin.ts` restored to the Admin version.
+> **Step 5 finished ✅ (2026-11-22)** — merged through PR #3 (`22fb416`).
+>
+> **5.1–5.3 details:** Postman: no token → 401 · AGENT on `authorize("ADMIN")` → 403 · ADMIN → 200 · AGENT on `authorize("AGENT")` → 200. Test route deleted, `create-admin.ts` restored to the Admin version.
 
 > **Step 4 finished ✅ (2026-11-17)** — merged through PR #2 (`1567ea0`). Branch `step-4-auth` deleted locally.
 
@@ -217,12 +220,21 @@
   - [x] b) `createRefreshToken(userId)` in `service.ts`: random token → SHA-256 hash → 7-day `expiresAt` → saves a row → returns the REAL token; ran `npx prisma generate` so `prisma.refreshToken` exists (BUG_DIARY #10)
   - [x] c) `login()` calls `createRefreshToken(user.id)` and returns it; `loginController` destructures it from the service result (NOT `req.body`) and sends `res.cookie("refreshToken", ..., { httpOnly: true, maxAge: 7 days })`; Postman Cookies tab shows it: HttpOnly true, expires in 7 days (2026-11-05)
 
-### Step 5 — authorize (RBAC)
+### Step 5 — authorize (RBAC) ✅
 
 - [x] 5.1 Concept: authentication ("who are you?" → 401) vs authorization ("what may you do?" → 403) (2026-11-20)
 - [x] 5.2 `src/middleware/authorize.ts`: `authorize(...roles)` returns `(req, res, next)`; no `req.user` → 401, role not in `roles` → 403, else `next()`. My first tries had everything in one function; Claude wrote the final version after I asked for it (2026-11-22)
 - [x] 5.3 Postman test with a throwaway `GET /auth/admin-only` (deleted afterwards) and a temporary AGENT user from `create-admin.ts` (restored afterwards) (2026-11-22)
-- [ ] 5.4 Commit + PR + merge
+- [x] 5.4 Commit `1c22839`, push, PR #3 `step-5-authorize` → `main`, merged (`22fb416`), `git switch main` + `git pull` (2026-11-22)
+
+### Step 6 — Validation, AppError, error handler, Pino (in progress)
+
+- [x] 6.1 Concept: never trust `req.body`; Zod schema = checklist; `parse` throws, `safeParse` returns `{ success, data | error }` (2026-11-22)
+- [x] 6.2 `npm install zod`; `modules/auth/schema.ts` (`loginSchema`: `z.email()` + `z.string().min(1)`); `middleware/validate.ts` (`validate(schema)` → 400 with `issues`, else `next()`); wired into `POST /auth/login`; Postman: `{}` → 400, bad email → 400, real login → 200 (2026-11-23)
+- [x] 6.3a `src/utils/AppError.ts`: `class AppError extends Error` + `statusCode`; typed along with Claude after I said class/extends/super felt too fast (2026-11-24)
+- [x] 6.3b `middleware/errorHandler.ts` (4 params; `AppError` → its own `statusCode` + message, anything else → 500 "Something went wrong"); plugged in `app.ts` AFTER the routes; service `login()` throws `AppError(..., 401)`; `loginController` try/catch removed (Express 5 forwards async errors); Postman: wrong password → 401, correct → 200 (2026-11-25). My first try used a fixed `400` instead of `err.statusCode` — fixed.
+- [x] 6.4 `npm install pino` + `npm install -D pino-pretty`; `utils/logger.ts` (pretty logs unless `NODE_ENV === "production"`); `logger.error(err)` first line of `errorHandler`. Wrong-password request printed ERROR + stack (`service.ts:80`) in the terminal while Postman still showed 401 (2026-11-26)
+- [ ] 6.5 Postman tests, commit, PR
 
 > **Note:** the project folder was moved and the old chat was lost. This file was rebuilt on 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed. Git was not started yet and there was no `api/` folder.
 
@@ -278,6 +290,11 @@
 | `api/src/middleware/authorize.ts` (5.2) | The "badge check at the room door": `authorize("ADMIN", ...)` lets only those roles through; 401 if no `req.user`, 403 if the role is not in the list. Runs AFTER `authenticate`. |
 | `api/src/modules/auth/controller.ts` | Reads `req.body`, calls the service, sends 200 or 401. `meController` replies with `req.user`. |
 | `api/src/modules/auth/service.ts` | Login logic: find user → check `isActive` → `bcrypt.compare`. |
+| `api/src/modules/auth/schema.ts` (6.2) | `loginSchema`: the Zod checklist for the login body (`email` must look like an email, `password` not empty). |
+| `api/src/utils/logger.ts` (6.4) | One shared Pino logger: pretty in dev, JSON in production. "Server's private notebook." |
+| `api/src/middleware/errorHandler.ts` (6.3b) | Central error handler: logs the real error, replies with the `AppError` number + message, or a safe 500. "One complaints desk." |
+| `api/src/utils/AppError.ts` (6.3a) | `AppError(message, statusCode)`: an error that carries its HTTP number. "Complaint slip with the department number." |
+| `api/src/middleware/validate.ts` (6.2) | `validate(schema)`: "gate guard" that runs `schema.safeParse(req.body)`; fail → 400 + `issues`, pass → `next()`. Same shape as `authorize`. |
 
 <br>
 
@@ -407,6 +424,21 @@
 - **File header comments** — every file starts with `WHAT:` / `WHY:` (+ `RUN:` for scripts).
 - **STEPS block** — 15 empty lines below the code, every file ends with `// ─── STEPS ───`: the file's job in numbered plain-English steps. Hints for "write it from memory".
 - **How to learn a structure without AI** — the tool's `init` command and "Getting started" docs create the standard layout. Copy the convention, then ask "who reads this file?"
+
+### Validation (Zod)
+
+- **Validation** = checking incoming data is the right shape before using it. `req.body` comes from outside, so never trust it. TypeScript types don't exist at runtime, so they can't protect it.
+- **Zod** = library where you describe the expected shape (a *schema*) and check real data against it.
+- **`parse` vs `safeParse`** = `parse` throws on bad data; `safeParse` returns `{ success: true, data }` or `{ success: false, error }`. Middleware uses `safeParse`.
+- **`result.error.issues`** = list of problems, each with `path` (which field) and `message`.
+- **Commas, not semicolons** between fields inside `z.object({ ... })` (it's a JS object).
+- **Zod 4:** `z.string().email()` is deprecated; use `z.email()`.
+- **`validate(schema)`** = outer call runs ONCE at startup and returns the inner `(req, res, next)` function, which runs on EVERY request and remembers `schema` (closure). `loginSchema` itself is just an object, not a function.
+- **Validate checks but doesn't clean:** extra fields still reach the controller unless we assign `req.body = result.data`. Do this for create-user later.
+- **`AppError`** = Error + `statusCode`. **Central error handler** = a middleware with 4 params `(err, req, res, next)`; Express calls it with the thrown error as `err`. It must be registered AFTER the routes (Express reads top to bottom). Unknown errors → safe 500, no internals leaked.
+- **Express 5** forwards errors thrown in `async` functions to the error handler automatically (no try/catch needed).
+- **Logging (Pino)** = the server writes its own notes. User sees only a safe message; the log keeps the real error + `stack` (file and line where it was thrown). `NODE_ENV` says where the app runs (`"production"` on the live server); `pino-pretty` only in dev.
+- **Always `return` after sending a 400**, or `next()` would also run and cause "headers already sent".
 
 ### .env & settings
 
@@ -645,6 +677,14 @@ Anyone can call the API directly with Postman or curl, skipping the UI. If the s
   - I guessed the OUTER function runs once per user request. Correct: outer runs ONCE at server start (`authorize("ADMIN")` has brackets in the route line); the INNER runs on every request.
   - I said "I don't have the understanding" about why the checks sit in the inner function. Short answer: the checks need the visitor's `req`, and no visitor exists at startup.
   - Revisit at Step 6 (Zod `validate(schema)` has the same shape) and Step 8 (first real use of `authorize("ADMIN")`).
+  - **2026-11-23 (Step 6.2):** asked the same question for `validate(loginSchema)`. I said "`validate` once, `loginSchema` again and again" — half right. Correct: the call `validate(loginSchema)` runs once and returns the inner function; the INNER function runs every request; `loginSchema` is an object, not a function. Recheck at Step 7 revision.
+
+- **class / extends / super (2026-11-24)**
+  - Felt too fast at 6.3. Short version: `class` = cookie cutter; `extends Error` = start from the normal Error; `super(message)` = let normal Error store the words; `this.statusCode` = the one thing we added. Revisit at Step 7 revision.
+  - New reply rules saved to Claude's memory: one idea per reply, real code first, blanks + hints, one check question, and go a bit faster.
+
+- **npm audit: 3 high severity vulnerabilities (2026-11-23)**
+  - Shown after `npm install zod`. Not from Zod. Do NOT run `npm audit fix --force`. Look at `npm audit` after Step 6.
 
 - **"Continue with Google" login (2026-11-20)**
   - I want this in the end product. It is NOT in CLAUDE.md's plan or the "Later" list, so it is parked until Week 4 is finished (as a stretch item).
