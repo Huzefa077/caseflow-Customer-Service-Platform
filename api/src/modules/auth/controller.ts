@@ -17,17 +17,17 @@ export async function loginController(req: Request, res: Response) {
 
     const { email, password } = req.body;
 
-    try {
-        const { user, accessToken, refreshToken } = await login(email, password);
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
 
-        res.status(200).json({ user, accessToken });  //users first login will give not only his data, but also a JWT token which will be later verfied by the server in every single URL navigations.
-    } catch (err) {
-        res.status(401).json({ message: "Invalid email or password" });
-    }
+    const { user, accessToken, refreshToken } = await login(email, password);
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({ user, accessToken });  
+    //users first login will give not only his data,
+    //  but also a JWT token which will be later verfied
+    //  by the server in every single URL navigations.
 }
 //___________________________________________________________________________________________________________________
 
@@ -74,9 +74,9 @@ export async function logoutController(req: Request, res: Response){
     res.clearCookie("refreshToken");
     res.status(200).json({message: "Logged out"});
 }
-//_____________________________________________________________________________________________________________
+//_____________________________________________________________________________________
 
-
+//__________________________________________________________________________________-
 
 //----STEPS (WHAT THIS FILE DOES)------
 //  1.  take email + password out of the request body
