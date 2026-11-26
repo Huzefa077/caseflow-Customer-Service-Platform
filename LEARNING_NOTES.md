@@ -24,16 +24,18 @@
 | | |
 |---|---|
 | **Week** | 1 |
-| **Step** | 6 — Zod validation middleware, `AppError` class, central error handler, Pino logging |
-| **Sub-step** | 6.2 done ✅ (Zod schema + `validate` middleware on `/auth/login`) → next 6.3 `AppError` + central error handler |
-| **Git branch** | `step-6-validation` (nothing committed yet for Step 6) |
+| **Step** | 7 — REVISION of Steps 1–6 (no new code) |
+| **Sub-step** | 7.1 — not started |
+| **Git branch** | `main` (up to date, `36bec86`). Branch `step-6-validation` merged and deleted. Step 7 needs no code, so no new branch unless we write something. |
 
 **Next thing to do:**
 
-- 6.3 `AppError` class (an error that carries a status code) + central error handler `(err, req, res, next)`; then `validate` and the controllers throw/forward `AppError` instead of each writing their own `res.status(...)`
-- 6.4 Pino logging
-- 6.5 Postman tests, commit, PR
+- Step 7 (from CLAUDE.md): quiz on Steps 1–6, and I explain the login flow back (request → `validate` → controller → service → bcrypt → JWT + refresh cookie, and what `errorHandler` does when it fails).
 - Still shaky: closures (outer function runs ONCE at startup, inner function runs on EVERY request). On 2026-11-23 I said `loginSchema` runs every time — wrong: `loginSchema` is an object (checklist), the returned inner function runs every time. See Open questions
+- Also still open: `class / extends / super` felt too fast in 6.3 (Open questions).
+- Uncommitted: this notes update + `TO-DO.md` changes (docs only).
+
+> **Step 6 finished ✅ (2026-11-26)** — merged through PR #4 (`36bec86`). Zod `validate` on `/auth/login`, `AppError`, central `errorHandler`, Pino logger. Postman: `{}` → 400, bad email → 400, wrong password → 401, correct login → 200.
 
 > **Step 5 finished ✅ (2026-11-22)** — merged through PR #3 (`22fb416`).
 >
@@ -227,14 +229,14 @@
 - [x] 5.3 Postman test with a throwaway `GET /auth/admin-only` (deleted afterwards) and a temporary AGENT user from `create-admin.ts` (restored afterwards) (2026-11-22)
 - [x] 5.4 Commit `1c22839`, push, PR #3 `step-5-authorize` → `main`, merged (`22fb416`), `git switch main` + `git pull` (2026-11-22)
 
-### Step 6 — Validation, AppError, error handler, Pino (in progress)
+### Step 6 — Validation, AppError, error handler, Pino ✅
 
 - [x] 6.1 Concept: never trust `req.body`; Zod schema = checklist; `parse` throws, `safeParse` returns `{ success, data | error }` (2026-11-22)
 - [x] 6.2 `npm install zod`; `modules/auth/schema.ts` (`loginSchema`: `z.email()` + `z.string().min(1)`); `middleware/validate.ts` (`validate(schema)` → 400 with `issues`, else `next()`); wired into `POST /auth/login`; Postman: `{}` → 400, bad email → 400, real login → 200 (2026-11-23)
 - [x] 6.3a `src/utils/AppError.ts`: `class AppError extends Error` + `statusCode`; typed along with Claude after I said class/extends/super felt too fast (2026-11-24)
 - [x] 6.3b `middleware/errorHandler.ts` (4 params; `AppError` → its own `statusCode` + message, anything else → 500 "Something went wrong"); plugged in `app.ts` AFTER the routes; service `login()` throws `AppError(..., 401)`; `loginController` try/catch removed (Express 5 forwards async errors); Postman: wrong password → 401, correct → 200 (2026-11-25). My first try used a fixed `400` instead of `err.statusCode` — fixed.
 - [x] 6.4 `npm install pino` + `npm install -D pino-pretty`; `utils/logger.ts` (pretty logs unless `NODE_ENV === "production"`); `logger.error(err)` first line of `errorHandler`. Wrong-password request printed ERROR + stack (`service.ts:80`) in the terminal while Postman still showed 401 (2026-11-26)
-- [ ] 6.5 Postman tests, commit, PR
+- [x] 6.5 Postman tests passed; commit `c531e28` (code) + `ad321d0` (docs), PR #4 merged into `main` (`36bec86`); `git switch main`, `git pull`, local branch deleted, `git fetch --prune` (2026-11-26). Learned: `git add .` only stages the current folder (I was in `api/`), and GitHub's "Compare & pull request" banner only shows for a while after a push.
 
 > **Note:** the project folder was moved and the old chat was lost. This file was rebuilt on 2026-10-18 by looking at which files exist. Only `CLAUDE.md`, `.gitignore` and `Notes/` existed. Git was not started yet and there was no `api/` folder.
 
